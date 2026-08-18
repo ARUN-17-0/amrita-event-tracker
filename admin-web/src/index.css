@@ -1,0 +1,152 @@
+/* Google Fonts - must be first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+/* ── Light Theme (default) ─────────────────────────────────── */
+@theme {
+  --color-primary: #2E7D32;
+  --color-primary-light: #4CAF50;
+  --color-primary-dark: #1B5E20;
+  --color-surface: #FFFFFF;
+  --color-background: #F5F7FA;
+  --color-text-primary: #1A1A2E;
+  --color-text-secondary: #6B7280;
+  --color-border: #E5E7EB;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ── Dark Blue Theme ───────────────────────────────────────── */
+[data-theme="dark-blue"] {
+  --color-primary: #3B82F6;
+  --color-primary-light: #60A5FA;
+  --color-primary-dark: #1D4ED8;
+  --color-surface: #1E293B;
+  --color-background: #0F172A;
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-border: #334155;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #60A5FA;
+}
+
+/* ── Dark Blue — component overrides ──────────────────────── */
+[data-theme="dark-blue"] body {
+  background-color: #0F172A;
+  color: #F1F5F9;
+}
+
+[data-theme="dark-blue"] .bg-white {
+  background-color: #1E293B !important;
+}
+
+[data-theme="dark-blue"] .bg-gray-50 {
+  background-color: #1E293B !important;
+}
+
+[data-theme="dark-blue"] .bg-gray-100 {
+  background-color: #0F172A !important;
+}
+
+[data-theme="dark-blue"] .border-gray-100,
+[data-theme="dark-blue"] .border-gray-200 {
+  border-color: #334155 !important;
+}
+
+[data-theme="dark-blue"] .text-gray-900,
+[data-theme="dark-blue"] .text-gray-800 {
+  color: #F1F5F9 !important;
+}
+
+[data-theme="dark-blue"] .text-gray-700,
+[data-theme="dark-blue"] .text-gray-600 {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark-blue"] .text-gray-500,
+[data-theme="dark-blue"] .text-gray-400 {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark-blue"] .shadow-sm {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark-blue"] input,
+[data-theme="dark-blue"] select,
+[data-theme="dark-blue"] textarea {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+[data-theme="dark-blue"] input::placeholder,
+[data-theme="dark-blue"] textarea::placeholder {
+  color: #64748B !important;
+}
+
+[data-theme="dark-blue"] .hover\:bg-gray-50:hover {
+  background-color: #334155 !important;
+}
+
+[data-theme="dark-blue"] .hover\:bg-gray-100:hover {
+  background-color: #334155 !important;
+}
+
+[data-theme="dark-blue"] .divide-gray-200 > * + * {
+  border-color: #334155 !important;
+}
+
+[data-theme="dark-blue"] table thead {
+  background-color: #0F172A !important;
+}
+
+[data-theme="dark-blue"] table th {
+  color: #94A3B8 !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark-blue"] table td {
+  border-color: #1E3A5F !important;
+}
+
+[data-theme="dark-blue"] table tr:hover {
+  background-color: #1E3A5F !important;
+}
+
+/* ── Base styles ───────────────────────────────────────────── */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* Base focus states */
+*:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+}
