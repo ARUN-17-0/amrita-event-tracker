@@ -81,7 +81,7 @@ export function CRsPage() {
   const handleRemove = async () => {
     if (!crToRemove) return;
     try {
-      await removeCR(crToRemove.uid);
+      await removeCR(crToRemove.uid, crToRemove.sectionId || '');
       setConfirmOpen(false);
     } catch (err) {
       console.error(err);
@@ -102,13 +102,13 @@ export function CRsPage() {
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Class Representatives</h1>
-        <button 
+        <button
           onClick={() => { setFormData({ studentId: '', sectionId: '' }); setDialogOpen(true); }}
-          className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light transition-colors text-sm font-medium"
+          className="flex items-center px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-light transition-colors text-sm font-medium w-fit"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4 mr-1.5" />
           Assign CR
         </button>
       </div>

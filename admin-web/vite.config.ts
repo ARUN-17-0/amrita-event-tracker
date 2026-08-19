@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/amrita-event-tracker/' : '/',
+  base: process.env.BASE_PATH || (process.env.GITHUB_ACTIONS ? '/amrita-event-tracker/' : '/'),
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
