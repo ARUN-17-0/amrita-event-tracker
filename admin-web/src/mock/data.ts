@@ -14,51 +14,9 @@ export const mockAdmin: UserProfile = {
   updatedAt: subDays(now, 10)
 };
 
-// ── Demo login accounts for all roles ──────────────────────────────
-export const mockFacultyUser: UserProfile = {
-  uid: 'fac-001',
-  fullName: 'Dr. Anand Kumar',
-  email: 'faculty@cb.amrita.edu',
-  role: 'faculty',
-  employeeId: 'EMP001',
-  departmentId: 'dept-001',
-  isActive: true,
-  createdAt: subDays(now, 200),
-  updatedAt: subDays(now, 50)
-};
-
-export const mockCRUser: UserProfile = {
-  uid: 'stu-001',
-  fullName: 'Arun Karthik',
-  email: 'cr@cb.amrita.edu',
-  role: 'cr',
-  rollNo: 'CB.EN.U4CSE21001',
-  departmentId: 'dept-001',
-  sectionId: 'sec-001',
-  isActive: true,
-  createdAt: subDays(now, 200),
-  updatedAt: subDays(now, 50)
-};
-
-export const mockStudentUser: UserProfile = {
-  uid: 'stu-004',
-  fullName: 'Dinesh K',
-  email: 'student@cb.amrita.edu',
-  role: 'student',
-  rollNo: 'CB.EN.U4CSE21004',
-  departmentId: 'dept-001',
-  sectionId: 'sec-001',
-  isActive: true,
-  createdAt: subDays(now, 200),
-  updatedAt: subDays(now, 50)
-};
-
-// All demo accounts (for easy lookup in auth service)
+// Demo account (Admin only)
 export const mockDemoAccounts: Record<string, { user: UserProfile; password: string }> = {
-  'admin@cb.amrita.edu':   { user: mockAdmin,       password: 'admin123'   },
-  'faculty@cb.amrita.edu': { user: mockFacultyUser,  password: 'faculty123' },
-  'cr@cb.amrita.edu':      { user: mockCRUser,       password: 'cr123'      },
-  'student@cb.amrita.edu': { user: mockStudentUser,  password: 'student123' },
+  'admin@cb.amrita.edu': { user: mockAdmin, password: 'admin123' },
 };
 
 export const mockDepartments: Department[] = [

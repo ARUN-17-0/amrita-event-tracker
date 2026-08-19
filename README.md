@@ -28,11 +28,9 @@ Open **http://localhost:5173**
 | Role | Email | Password |
 |---|---|---|
 | Admin | `admin@cb.amrita.edu` | `admin123` |
-| Faculty | `faculty@cb.amrita.edu` | `faculty123` |
-| CR | `cr@cb.amrita.edu` | `cr123` |
-| Student | `student@cb.amrita.edu` | `student123` |
 
 > Mock mode is enabled by default (`VITE_USE_MOCK=true`). No Firebase config needed.
+> New faculty & student accounts can be added directly via the Admin panel with custom passwords.
 
 ### Features
 - 📊 Dashboard with stats and recent activity
