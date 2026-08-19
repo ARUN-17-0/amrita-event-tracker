@@ -15,7 +15,10 @@ export const useStudents = () => {
   }, []);
   useEffect(() => { fetch(); }, [fetch]);
 
-  const addStudent = async (d: any) => { await studentService.create(d); await fetch(); };
+  const addStudent = async (d: any) => {
+    await studentService.create({ ...d, role: 'student', isActive: true });
+    await fetch();
+  };
   const updateStudent = async (uid: string, d: any) => { await studentService.update(uid, d); await fetch(); };
   const bulkImportStudents = async (rows: BulkImportRow[]): Promise<BulkImportResult> => {
     const r = await studentService.bulkImport(rows);

@@ -15,7 +15,10 @@ export const useFaculty = () => {
   }, []);
   useEffect(() => { fetch(); }, [fetch]);
 
-  const addFaculty = async (d: any) => { await facultyService.create(d); await fetch(); };
+  const addFaculty = async (d: any) => {
+    await facultyService.create({ ...d, role: 'faculty', isActive: true });
+    await fetch();
+  };
   const updateFaculty = async (uid: string, d: any) => { await facultyService.update(uid, d); await fetch(); };
 
   return { faculty, data: faculty, loading, error, refresh: fetch, addFaculty, updateFaculty };
