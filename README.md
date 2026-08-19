@@ -65,4 +65,4 @@ Open **http://localhost:5173**
 
 ## License
 
-MIT — Amrita School of Engineering, Coimbatore
+MIT — Amrita School of Engineering, Bengaluru
