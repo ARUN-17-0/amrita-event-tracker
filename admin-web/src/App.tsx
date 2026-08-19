@@ -33,14 +33,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role !== 'admin') {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background text-red-500 text-lg">
-        Access Denied: You must be an administrator to view this page.
-      </div>
-    );
-  }
-
   return <>{children}</>;
 }
 
