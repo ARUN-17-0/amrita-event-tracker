@@ -6,10 +6,13 @@ import { FormDialog } from '@/components/common/FormDialog';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useSemesters } from '@/hooks/useSemesters';
+import { useAuth } from '@/hooks/useAuth';
 import { Subject, TableColumn } from '@/types';
 import { Plus, Edit } from 'lucide-react';
 
 export function SubjectsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { subjects, loading, addSubject, updateSubject } = useSubjects();
   const { departments } = useDepartments();
   const { semesters } = useSemesters();
@@ -74,25 +77,27 @@ export function SubjectsPage() {
     }
   };
 
-  const actions = (sub: Subject) => (
+  const actions = isAdmin ? (sub: Subject) => (
     <div className="flex space-x-2">
       <button onClick={() => handleOpenEdit(sub)} className="text-gray-500 hover:text-primary transition-colors p-1" title="Edit">
         <Edit className="w-4 h-4" />
       </button>
     </div>
-  );
+  ) : undefined;
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Subjects</h1>
-        <button 
-          onClick={handleOpenAdd}
-          className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light transition-colors text-sm font-medium"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Subject
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={handleOpenAdd}
+            className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light transition-colors text-sm font-medium w-fit"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Subject
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

@@ -6,27 +6,32 @@ import {
   Settings, ChevronLeft, ChevronRight, Activity
 } from 'lucide-react';
 
+import { useAuth } from '@/hooks/useAuth';
+
 export interface AdminSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
   onNavClick?: () => void;
 }
 
-const navItems = [
-  { path: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
-  { path: '/calendar',    label: 'Calendar',    icon: CalendarDays },
-  { path: '/departments', label: 'Departments', icon: Building2 },
-  { path: '/semesters',   label: 'Semesters',   icon: GraduationCap },
-  { path: '/sections',    label: 'Sections',    icon: Users },
-  { path: '/subjects',    label: 'Subjects',    icon: BookOpen },
-  { path: '/faculty',     label: 'Faculty',     icon: UserCog },
-  { path: '/students',    label: 'Students',    icon: UserCheck },
-  { path: '/crs',         label: 'CRs',         icon: Shield },
-  { path: '/audit-logs',  label: 'Audit Logs',  icon: FileText },
-  { path: '/settings',    label: 'Settings',    icon: Settings },
+const allNavItems = [
+  { path: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard, roles: ['admin', 'faculty', 'cr', 'student'] },
+  { path: '/calendar',    label: 'Calendar',    icon: CalendarDays,     roles: ['admin', 'faculty', 'cr', 'student'] },
+  { path: '/departments', label: 'Departments', icon: Building2,        roles: ['admin'] },
+  { path: '/semesters',   label: 'Semesters',   icon: GraduationCap,    roles: ['admin'] },
+  { path: '/sections',    label: 'Sections',    icon: Users,            roles: ['admin', 'faculty', 'cr', 'student'] },
+  { path: '/subjects',    label: 'Subjects',    icon: BookOpen,         roles: ['admin', 'faculty', 'cr', 'student'] },
+  { path: '/faculty',     label: 'Faculty',     icon: UserCog,          roles: ['admin'] },
+  { path: '/students',    label: 'Students',    icon: UserCheck,        roles: ['admin'] },
+  { path: '/crs',         label: 'CRs',         icon: Shield,           roles: ['admin'] },
+  { path: '/audit-logs',  label: 'Audit Logs',  icon: FileText,         roles: ['admin'] },
+  { path: '/settings',    label: 'Settings',    icon: Settings,         roles: ['admin', 'faculty', 'cr', 'student'] },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed, onToggle, onNavClick }) => {
+  const { user } = useAuth();
+  const currentRole = user?.role || 'admin';
+  const navItems = allNavItems.filter((item) => item.roles.includes(currentRole));
   return (
     <aside
       className={`h-full bg-surface border-r border-border flex flex-col transition-all duration-300 ${

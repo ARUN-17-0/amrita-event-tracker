@@ -7,10 +7,13 @@ import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useSections } from '@/hooks/useSections';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useSemesters } from '@/hooks/useSemesters';
+import { useAuth } from '@/hooks/useAuth';
 import { Section, TableColumn } from '@/types';
 import { Plus, Edit, UserMinus } from 'lucide-react';
 
 export function SectionsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { sections, loading, addSection, updateSection, removeCR } = useSections();
   const { departments } = useDepartments();
   const { semesters } = useSemesters();
@@ -91,7 +94,7 @@ export function SectionsPage() {
     }
   };
 
-  const actions = (sec: Section) => (
+  const actions = isAdmin ? (sec: Section) => (
     <div className="flex space-x-2">
       <button onClick={() => handleOpenEdit(sec)} className="text-gray-500 hover:text-primary transition-colors p-1" title="Edit">
         <Edit className="w-4 h-4" />
@@ -106,19 +109,21 @@ export function SectionsPage() {
         </button>
       )}
     </div>
-  );
+  ) : undefined;
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Sections</h1>
-        <button 
-          onClick={handleOpenAdd}
-          className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light transition-colors text-sm font-medium"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Section
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={handleOpenAdd}
+            className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light transition-colors text-sm font-medium w-fit"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Section
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
