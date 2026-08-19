@@ -16,8 +16,9 @@ export function FacultyPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFac, setEditingFac] = useState<UserProfile | null>(null);
 
-  const [formData, setFormData] = useState({ fullName: '', email: '', employeeId: '', departmentId: '' });
+  const [formData, setFormData] = useState({ fullName: '', email: '', employeeId: '', departmentId: '', password: '', confirmPassword: '' });
   const [formLoading, setFormLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const getDeptName = (id?: string) => {
     if (!id) return '-';
@@ -52,7 +53,8 @@ export function FacultyPage() {
 
   const handleOpenAdd = () => {
     setEditingFac(null);
-    setFormData({ fullName: '', email: '', employeeId: '', departmentId: '' });
+    setFormData({ fullName: '', email: '', employeeId: '', departmentId: '', password: '', confirmPassword: '' });
+    setPasswordError('');
     setDialogOpen(true);
   };
 
@@ -62,13 +64,33 @@ export function FacultyPage() {
       fullName: fac.fullName, 
       email: fac.email, 
       employeeId: fac.employeeId || '', 
-      departmentId: fac.departmentId || '' 
+      departmentId: fac.departmentId || '',
+      password: '',
+      confirmPassword: ''
     });
+    setPasswordError('');
     setDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError('');
+
+    if (!editingFac) {
+      if (!formData.password) {
+        setPasswordError('Password is required');
+        return;
+      }
+      if (formData.password.length < 6) {
+        setPasswordError('Password must be at least 6 characters');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setPasswordError('Passwords do not match');
+        return;
+      }
+    }
+
     setFormLoading(true);
     try {
       if (editingFac) {
@@ -114,6 +136,11 @@ export function FacultyPage() {
 
       <FormDialog open={dialogOpen} title={editingFac ? 'Edit Faculty' : 'Onboard Faculty'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
         <div className="space-y-4">
+          {passwordError && (
+            <div className="p-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg">
+              {passwordError}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
             <input type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
@@ -122,6 +149,32 @@ export function FacultyPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input type="email" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
           </div>
+          {!editingFac && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Min. 6 characters"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Re-enter password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>

@@ -20,8 +20,9 @@ export function StudentsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<UserProfile | null>(null);
 
-  const [formData, setFormData] = useState({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '' });
+  const [formData, setFormData] = useState({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '', password: '', confirmPassword: '' });
   const [formLoading, setFormLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const getDeptName = (id?: string) => {
     if (!id) return '-';
@@ -66,7 +67,8 @@ export function StudentsPage() {
 
   const handleOpenAdd = () => {
     setEditingStudent(null);
-    setFormData({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '' });
+    setFormData({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '', password: '', confirmPassword: '' });
+    setPasswordError('');
     setDialogOpen(true);
   };
 
@@ -77,13 +79,33 @@ export function StudentsPage() {
       email: stu.email, 
       rollNo: stu.rollNo || '', 
       departmentId: stu.departmentId || '',
-      sectionId: stu.sectionId || ''
+      sectionId: stu.sectionId || '',
+      password: '',
+      confirmPassword: ''
     });
+    setPasswordError('');
     setDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError('');
+
+    if (!editingStudent) {
+      if (!formData.password) {
+        setPasswordError('Password is required');
+        return;
+      }
+      if (formData.password.length < 6) {
+        setPasswordError('Password must be at least 6 characters');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setPasswordError('Passwords do not match');
+        return;
+      }
+    }
+
     setFormLoading(true);
     try {
       if (editingStudent) {
@@ -138,6 +160,11 @@ export function StudentsPage() {
 
       <FormDialog open={dialogOpen} title={editingStudent ? 'Edit Student' : 'Add Student'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
         <div className="space-y-4">
+          {passwordError && (
+            <div className="p-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg">
+              {passwordError}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
             <input type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
@@ -146,6 +173,32 @@ export function StudentsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input type="email" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
           </div>
+          {!editingStudent && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Min. 6 characters"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Re-enter password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Roll Number</label>
             <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.rollNo} onChange={(e) => setFormData({ ...formData, rollNo: e.target.value })} />

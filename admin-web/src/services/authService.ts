@@ -8,10 +8,18 @@ const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Runtime store for newly created accounts (mock mode only)
+const runtimeCredentials = new Map<string, { user: UserProfile; password: string }>();
+
+export function registerMockCredential(user: UserProfile, password: string) {
+  runtimeCredentials.set(user.email.toLowerCase(), { user, password });
+}
+
 const mockAuthService = {
   login: async (email: string, password: string): Promise<UserProfile> => {
     await delay(500);
-    const account = mockDemoAccounts[email.toLowerCase()];
+    const emailLower = email.toLowerCase();
+    const account = mockDemoAccounts[emailLower] ?? runtimeCredentials.get(emailLower);
     if (account && account.password === password) {
       localStorage.setItem('aet_user', JSON.stringify(account.user));
       return account.user;
