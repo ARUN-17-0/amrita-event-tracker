@@ -4,21 +4,24 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import { DataTable } from '@/components/data/DataTable';
 import { SearchBar } from '@/components/data/SearchBar';
 import { FormDialog } from '@/components/common/FormDialog';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useStudents } from '@/hooks/useStudents';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useSections } from '@/hooks/useSections';
 import { UserProfile, TableColumn } from '@/types';
-import { Plus, Edit, Upload } from 'lucide-react';
+import { Plus, Edit, Upload, Trash2 } from 'lucide-react';
 
 export function StudentsPage() {
   const navigate = useNavigate();
-  const { students, loading, addStudent, updateStudent } = useStudents();
+  const { students, loading, addStudent, updateStudent, deleteStudent } = useStudents();
   const { departments } = useDepartments();
   const { sections } = useSections();
   
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<UserProfile | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<UserProfile | null>(null);
 
   const [formData, setFormData] = useState({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '', password: '', confirmPassword: '' });
   const [formLoading, setFormLoading] = useState(false);
@@ -121,10 +124,24 @@ export function StudentsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!studentToDelete) return;
+    try {
+      await deleteStudent(studentToDelete.uid);
+      setConfirmDeleteOpen(false);
+      setStudentToDelete(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const actions = (stu: UserProfile) => (
     <div className="flex space-x-2">
       <button onClick={() => handleOpenEdit(stu)} className="text-gray-500 hover:text-primary transition-colors p-1" title="Edit">
         <Edit className="w-4 h-4" />
+      </button>
+      <button onClick={() => { setStudentToDelete(stu); setConfirmDeleteOpen(true); }} className="text-red-500 hover:text-red-700 transition-colors p-1" title="Delete">
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
   );
@@ -158,7 +175,7 @@ export function StudentsPage() {
         <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No students found." />
       </div>
 
-      <FormDialog open={dialogOpen} title={editingStudent ? 'Edit Student' : 'Add Student'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
+      <FormDialog open={dialogOpen} title={editingStudent ? 'Student Details / Edit' : 'Add Student'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
         <div className="space-y-4">
           {passwordError && (
             <div className="p-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg">
@@ -219,8 +236,35 @@ export function StudentsPage() {
               </select>
             </div>
           </div>
+
+          {editingStudent && (
+            <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+              <span className="text-xs text-gray-500">UID: {editingStudent.uid}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDialogOpen(false);
+                  setStudentToDelete(editingStudent);
+                  setConfirmDeleteOpen(true);
+                }}
+                className="text-xs text-red-600 hover:text-red-800 font-medium flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete User
+              </button>
+            </div>
+          )}
         </div>
       </FormDialog>
+
+      <ConfirmationDialog
+        open={confirmDeleteOpen}
+        title="Delete Student"
+        message={`Are you sure you want to delete "${studentToDelete?.fullName}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => { setConfirmDeleteOpen(false); setStudentToDelete(null); }}
+        confirmLabel="Delete Student"
+        variant="danger"
+      />
     </AdminLayout>
   );
 }

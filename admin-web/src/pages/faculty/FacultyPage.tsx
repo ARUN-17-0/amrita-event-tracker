@@ -3,18 +3,21 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import { DataTable } from '@/components/data/DataTable';
 import { SearchBar } from '@/components/data/SearchBar';
 import { FormDialog } from '@/components/common/FormDialog';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useFaculty } from '@/hooks/useFaculty';
 import { useDepartments } from '@/hooks/useDepartments';
 import { UserProfile, TableColumn } from '@/types';
-import { Plus, Edit } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 
 export function FacultyPage() {
-  const { faculty, loading, addFaculty, updateFaculty } = useFaculty();
+  const { faculty, loading, addFaculty, updateFaculty, deleteFaculty } = useFaculty();
   const { departments } = useDepartments();
   
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFac, setEditingFac] = useState<UserProfile | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [facToDelete, setFacToDelete] = useState<UserProfile | null>(null);
 
   const [formData, setFormData] = useState({ fullName: '', email: '', employeeId: '', departmentId: '', password: '', confirmPassword: '' });
   const [formLoading, setFormLoading] = useState(false);
@@ -106,10 +109,24 @@ export function FacultyPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!facToDelete) return;
+    try {
+      await deleteFaculty(facToDelete.uid);
+      setConfirmDeleteOpen(false);
+      setFacToDelete(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const actions = (fac: UserProfile) => (
     <div className="flex space-x-2">
       <button onClick={() => handleOpenEdit(fac)} className="text-gray-500 hover:text-primary transition-colors p-1" title="Edit">
         <Edit className="w-4 h-4" />
+      </button>
+      <button onClick={() => { setFacToDelete(fac); setConfirmDeleteOpen(true); }} className="text-red-500 hover:text-red-700 transition-colors p-1" title="Delete">
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
   );
@@ -134,7 +151,7 @@ export function FacultyPage() {
         <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No faculty found." />
       </div>
 
-      <FormDialog open={dialogOpen} title={editingFac ? 'Edit Faculty' : 'Onboard Faculty'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
+      <FormDialog open={dialogOpen} title={editingFac ? 'Faculty Details / Edit' : 'Onboard Faculty'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
         <div className="space-y-4">
           {passwordError && (
             <div className="p-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg">
@@ -188,8 +205,35 @@ export function FacultyPage() {
               </select>
             </div>
           </div>
+
+          {editingFac && (
+            <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+              <span className="text-xs text-gray-500">UID: {editingFac.uid}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDialogOpen(false);
+                  setFacToDelete(editingFac);
+                  setConfirmDeleteOpen(true);
+                }}
+                className="text-xs text-red-600 hover:text-red-800 font-medium flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete User
+              </button>
+            </div>
+          )}
         </div>
       </FormDialog>
+
+      <ConfirmationDialog
+        open={confirmDeleteOpen}
+        title="Delete Faculty Member"
+        message={`Are you sure you want to delete "${facToDelete?.fullName}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => { setConfirmDeleteOpen(false); setFacToDelete(null); }}
+        confirmLabel="Delete User"
+        variant="danger"
+      />
     </AdminLayout>
   );
 }

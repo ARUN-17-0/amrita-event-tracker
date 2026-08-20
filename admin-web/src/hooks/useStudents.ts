@@ -25,11 +25,12 @@ export const useStudents = () => {
     await fetch();
   };
   const updateStudent = async (uid: string, d: any) => { await studentService.update(uid, d); await fetch(); };
+  const deleteStudent = async (uid: string) => { await studentService.delete(uid); await fetch(); };
   const bulkImportStudents = async (rows: BulkImportRow[]): Promise<BulkImportResult> => {
     const r = await studentService.bulkImport(rows);
     await fetch();
     return r;
   };
 
-  return { students, data: students, loading, error, refresh: fetch, addStudent, updateStudent, bulkImportStudents };
+  return { students, data: students, loading, error, refresh: fetch, addStudent, updateStudent, deleteStudent, bulkImportStudents };
 };

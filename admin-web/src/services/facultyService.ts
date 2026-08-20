@@ -21,6 +21,10 @@ const mockService = {
     const index = memoryFaculty.findIndex(f => f.uid === uid);
     if (index === -1) throw new Error('Not found');
     memoryFaculty[index] = { ...memoryFaculty[index], ...data, updatedAt: new Date() };
+  },
+  delete: async (uid: string): Promise<void> => {
+    await delay(100);
+    memoryFaculty = memoryFaculty.filter(f => f.uid !== uid);
   }
 };
 
@@ -46,6 +50,11 @@ const firebaseService = {
   update: async (uid: string, data: Partial<Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
     if (!db) throw new Error('No FB');
     await updateDoc(doc(db, 'profiles', uid), { ...data, updatedAt: Timestamp.now() });
+  },
+  delete: async (uid: string): Promise<void> => {
+    if (!db) throw new Error('No FB');
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'profiles', uid));
   }
 };
 export const facultyService = isMock ? mockService : firebaseService;

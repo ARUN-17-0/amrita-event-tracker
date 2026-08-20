@@ -25,6 +25,7 @@ export const useFaculty = () => {
     await fetch();
   };
   const updateFaculty = async (uid: string, d: any) => { await facultyService.update(uid, d); await fetch(); };
+  const deleteFaculty = async (uid: string) => { await facultyService.delete(uid); await fetch(); };
 
-  return { faculty, data: faculty, loading, error, refresh: fetch, addFaculty, updateFaculty };
+  return { faculty, data: faculty, loading, error, refresh: fetch, addFaculty, updateFaculty, deleteFaculty };
 };

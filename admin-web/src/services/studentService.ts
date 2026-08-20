@@ -22,6 +22,10 @@ const mockService = {
     if (index === -1) throw new Error('Not found');
     memoryStudents[index] = { ...memoryStudents[index], ...data, updatedAt: new Date() };
   },
+  delete: async (uid: string): Promise<void> => {
+    await delay(100);
+    memoryStudents = memoryStudents.filter(s => s.uid !== uid);
+  },
   bulkImport: async (rows: BulkImportRow[]): Promise<BulkImportResult> => {
     await delay(500);
     const res: BulkImportResult = { imported: 0, skipped: 0, failed: 0, errors: [] };
@@ -65,6 +69,11 @@ const firebaseService = {
   update: async (uid: string, data: Partial<Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
     if (!db) throw new Error('No FB');
     await updateDoc(doc(db, 'profiles', uid), { ...data, updatedAt: Timestamp.now() });
+  },
+  delete: async (uid: string): Promise<void> => {
+    if (!db) throw new Error('No FB');
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'profiles', uid));
   },
   bulkImport: async (rows: BulkImportRow[]): Promise<BulkImportResult> => {
     // Basic mock implementation for FB as well
