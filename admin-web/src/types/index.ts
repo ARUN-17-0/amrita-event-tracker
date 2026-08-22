@@ -4,7 +4,7 @@
 
 // --- Enums / Union Types ---
 
-export type UserRole = 'admin' | 'faculty' | 'cr' | 'student';
+export type UserRole = 'admin' | 'faculty' | 'course_mentor' | 'cr' | 'student';
 
 export type EventType =
   | 'assignment'
@@ -90,6 +90,7 @@ export interface AcademicEvent {
   topics?: string[];
   subjectId: string;
   sectionId: string;
+  departmentId: string;
   semesterId: string;
   eventDate: Date;
   eventTime: string;

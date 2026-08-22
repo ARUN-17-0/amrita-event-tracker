@@ -19,7 +19,7 @@ export function FacultyPage() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [facToDelete, setFacToDelete] = useState<UserProfile | null>(null);
 
-  const [formData, setFormData] = useState({ fullName: '', email: '', employeeId: '', departmentId: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({ fullName: '', email: '', employeeId: '', departmentId: '', role: 'faculty', password: '', confirmPassword: '' });
   const [formLoading, setFormLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
@@ -56,7 +56,7 @@ export function FacultyPage() {
 
   const handleOpenAdd = () => {
     setEditingFac(null);
-    setFormData({ fullName: '', email: '', employeeId: '', departmentId: '', password: '', confirmPassword: '' });
+    setFormData({ fullName: '', email: '', employeeId: '', departmentId: '', role: 'faculty', password: '', confirmPassword: '' });
     setPasswordError('');
     setDialogOpen(true);
   };
@@ -68,6 +68,7 @@ export function FacultyPage() {
       email: fac.email, 
       employeeId: fac.employeeId || '', 
       departmentId: fac.departmentId || '',
+      role: fac.role || 'faculty',
       password: '',
       confirmPassword: ''
     });
@@ -204,6 +205,14 @@ export function FacultyPage() {
                 {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+              <option value="faculty">Faculty</option>
+              <option value="course_mentor">Course Mentor (sees all dept events)</option>
+            </select>
           </div>
 
           {editingFac && (

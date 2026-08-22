@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AcademicEvent } from '../types';
+import { AcademicEvent, EventType } from '../types';
 import { calendarService } from '../services/calendarService';
+import { checkWeeklyLimit, checkTimeSpacing, checkDeptQuizConflict } from '../utils/eventRules';
 
 export const useCalendar = () => {
   const [events, setEvents] = useState<AcademicEvent[]>([]);
@@ -15,8 +16,45 @@ export const useCalendar = () => {
   }, []);
   useEffect(() => { fetch(); }, [fetch]);
 
-  const getEventsForDate = async (d: Date) => calendarService.getEventsForDate(d);
-  const getEventsForMonth = async (y: number, m: number) => calendarService.getEventsForMonth(y, m);
+  // Synchronous filter from loaded state — no async re-fetch needed
+  const getEventsForDate = (d: Date) =>
+    events.filter(e => e.eventDate.toDateString() === d.toDateString());
 
-  return { events, data: events, loading, error, refresh: fetch, getEventsForDate, getEventsForMonth };
+  const getEventsForMonth = (y: number, m: number) =>
+    events.filter(e => e.eventDate.getFullYear() === y && e.eventDate.getMonth() === m);
+
+  const createEvent = async (
+    data: Omit<AcademicEvent, 'id' | 'createdAt' | 'updatedAt'>,
+    isMentor = false
+  ): Promise<{ ok: boolean; message: string }> => {
+    // Rule 1: weekly limit (quiz+assignment only)
+    const weekly = checkWeeklyLimit(events, { sectionId: data.sectionId, eventDate: data.eventDate, type: data.type as EventType });
+    if (!weekly.ok) return weekly;
+
+    // Rule 2: 25-min spacing within same section + day
+    const spacing = checkTimeSpacing(events, { sectionId: data.sectionId, eventDate: data.eventDate, eventTime: data.eventTime });
+    if (!spacing.ok) return spacing;
+
+    // Rule 3 (Course Mentor only): 1-hr dept quiz gap
+    if (isMentor) {
+      const deptConflict = checkDeptQuizConflict(events, {
+        departmentId: data.departmentId,
+        eventDate: data.eventDate,
+        eventTime: data.eventTime,
+        type: data.type as EventType
+      });
+      if (!deptConflict.ok) return deptConflict;
+    }
+
+    await calendarService.createEvent(data);
+    await fetch();
+    return { ok: true, message: '' };
+  };
+
+  const deleteEvent = async (id: string): Promise<void> => {
+    await calendarService.deleteEvent(id);
+    await fetch();
+  };
+
+  return { events, data: events, loading, error, refresh: fetch, getEventsForDate, getEventsForMonth, createEvent, deleteEvent };
 };

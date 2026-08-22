@@ -15,17 +15,17 @@ export interface AdminSidebarProps {
 }
 
 const allNavItems = [
-  { path: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard, roles: ['admin', 'faculty', 'cr', 'student'] },
-  { path: '/calendar',    label: 'Calendar',    icon: CalendarDays,     roles: ['admin', 'faculty', 'cr', 'student'] },
+  { path: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard, roles: ['admin', 'faculty', 'course_mentor', 'cr', 'student'] },
+  { path: '/calendar',    label: 'Calendar',    icon: CalendarDays,     roles: ['admin', 'faculty', 'course_mentor', 'cr', 'student'] },
   { path: '/departments', label: 'Departments', icon: Building2,        roles: ['admin'] },
   { path: '/semesters',   label: 'Semesters',   icon: GraduationCap,    roles: ['admin'] },
-  { path: '/sections',    label: 'Sections',    icon: Users,            roles: ['admin', 'faculty', 'cr', 'student'] },
-  { path: '/subjects',    label: 'Subjects',    icon: BookOpen,         roles: ['admin', 'faculty', 'cr', 'student'] },
+  { path: '/sections',    label: 'Sections',    icon: Users,            roles: ['admin', 'faculty', 'course_mentor', 'cr', 'student'] },
+  { path: '/subjects',    label: 'Subjects',    icon: BookOpen,         roles: ['admin', 'faculty', 'course_mentor', 'cr', 'student'] },
   { path: '/faculty',     label: 'Faculty',     icon: UserCog,          roles: ['admin'] },
   { path: '/students',    label: 'Students',    icon: UserCheck,        roles: ['admin'] },
   { path: '/crs',         label: 'CRs',         icon: Shield,           roles: ['admin'] },
   { path: '/audit-logs',  label: 'Audit Logs',  icon: FileText,         roles: ['admin'] },
-  { path: '/settings',    label: 'Settings',    icon: Settings,         roles: ['admin', 'faculty', 'cr', 'student'] },
+  { path: '/settings',    label: 'Settings',    icon: Settings,         roles: ['admin', 'faculty', 'course_mentor', 'cr', 'student'] },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed, onToggle, onNavClick }) => {

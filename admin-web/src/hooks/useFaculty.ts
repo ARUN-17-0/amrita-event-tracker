@@ -18,7 +18,8 @@ export const useFaculty = () => {
 
   const addFaculty = async (d: any) => {
     const { password, confirmPassword, ...profileData } = d;
-    const newUser = await facultyService.create({ ...profileData, role: 'faculty', isActive: true });
+    const role = profileData.role || 'faculty';
+    const newUser = await facultyService.create({ ...profileData, role, isActive: true });
     if (import.meta.env.VITE_USE_MOCK === 'true' && password) {
       registerMockCredential(newUser, password);
     }
