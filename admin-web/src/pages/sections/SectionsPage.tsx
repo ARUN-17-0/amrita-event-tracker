@@ -9,12 +9,12 @@ import { useDepartments } from '@/hooks/useDepartments';
 import { useSemesters } from '@/hooks/useSemesters';
 import { useAuth } from '@/hooks/useAuth';
 import { Section, TableColumn } from '@/types';
-import { Plus, Edit, UserMinus } from 'lucide-react';
+import { Plus, Edit, UserMinus, Trash2 } from 'lucide-react';
 
 export function SectionsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const { sections, loading, addSection, updateSection, removeCR } = useSections();
+  const { sections, loading, addSection, updateSection, removeCR, deleteSection } = useSections();
   const { departments } = useDepartments();
   const { semesters } = useSemesters();
   
@@ -24,6 +24,8 @@ export function SectionsPage() {
   
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [crToRemove, setCrToRemove] = useState<Section | null>(null);
+  const [secToDelete, setSecToDelete] = useState<Section | null>(null);
+  const [confirmDeleteSecOpen, setConfirmDeleteSecOpen] = useState(false);
 
   const [formData, setFormData] = useState({ name: '', departmentId: '', semesterId: '' });
   const [formLoading, setFormLoading] = useState(false);
@@ -94,6 +96,17 @@ export function SectionsPage() {
     }
   };
 
+  const handleDeleteSection = async () => {
+    if (!secToDelete) return;
+    try {
+      await deleteSection(secToDelete.id);
+      setConfirmDeleteSecOpen(false);
+      setSecToDelete(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const actions = isAdmin ? (sec: Section) => (
     <div className="flex space-x-2">
       <button onClick={() => handleOpenEdit(sec)} className="text-gray-500 hover:text-primary transition-colors p-1" title="Edit">
@@ -108,6 +121,13 @@ export function SectionsPage() {
           <UserMinus className="w-4 h-4" />
         </button>
       )}
+      <button 
+        onClick={() => { setSecToDelete(sec); setConfirmDeleteSecOpen(true); }} 
+        className="text-red-500 hover:text-red-700 transition-colors p-1"
+        title="Delete Section"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
     </div>
   ) : undefined;
 
@@ -167,6 +187,16 @@ export function SectionsPage() {
         onConfirm={handleRemoveCR}
         onCancel={() => setConfirmOpen(false)}
         confirmLabel="Remove"
+        variant="danger"
+      />
+
+      <ConfirmationDialog
+        open={confirmDeleteSecOpen}
+        title="Delete Section"
+        message={`Are you sure you want to delete section "${secToDelete?.name}"?`}
+        onConfirm={handleDeleteSection}
+        onCancel={() => { setConfirmDeleteSecOpen(false); setSecToDelete(null); }}
+        confirmLabel="Delete Section"
         variant="danger"
       />
     </AdminLayout>

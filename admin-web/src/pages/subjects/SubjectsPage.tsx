@@ -3,23 +3,26 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import { DataTable } from '@/components/data/DataTable';
 import { SearchBar } from '@/components/data/SearchBar';
 import { FormDialog } from '@/components/common/FormDialog';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useSemesters } from '@/hooks/useSemesters';
 import { useAuth } from '@/hooks/useAuth';
 import { Subject, TableColumn } from '@/types';
-import { Plus, Edit } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 
 export function SubjectsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const { subjects, loading, addSubject, updateSubject } = useSubjects();
+  const { subjects, loading, addSubject, updateSubject, deleteSubject } = useSubjects();
   const { departments } = useDepartments();
   const { semesters } = useSemesters();
   
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSub, setEditingSub] = useState<Subject | null>(null);
+  const [subToDelete, setSubToDelete] = useState<Subject | null>(null);
+  const [confirmDeleteSubOpen, setConfirmDeleteSubOpen] = useState(false);
 
   const [formData, setFormData] = useState({ name: '', code: '', departmentId: '', semesterId: '', credits: 1 });
   const [formLoading, setFormLoading] = useState(false);
@@ -77,10 +80,28 @@ export function SubjectsPage() {
     }
   };
 
+  const handleDeleteSubject = async () => {
+    if (!subToDelete) return;
+    try {
+      await deleteSubject(subToDelete.id);
+      setConfirmDeleteSubOpen(false);
+      setSubToDelete(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const actions = isAdmin ? (sub: Subject) => (
     <div className="flex space-x-2">
       <button onClick={() => handleOpenEdit(sub)} className="text-gray-500 hover:text-primary transition-colors p-1" title="Edit">
         <Edit className="w-4 h-4" />
+      </button>
+      <button 
+        onClick={() => { setSubToDelete(sub); setConfirmDeleteSubOpen(true); }} 
+        className="text-red-500 hover:text-red-700 transition-colors p-1"
+        title="Delete Subject"
+      >
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
   ) : undefined;
@@ -139,6 +160,16 @@ export function SubjectsPage() {
           </div>
         </div>
       </FormDialog>
+
+      <ConfirmationDialog
+        open={confirmDeleteSubOpen}
+        title="Delete Subject"
+        message={`Are you sure you want to delete subject "${subToDelete?.name}"?`}
+        onConfirm={handleDeleteSubject}
+        onCancel={() => { setConfirmDeleteSubOpen(false); setSubToDelete(null); }}
+        confirmLabel="Delete Subject"
+        variant="danger"
+      />
     </AdminLayout>
   );
 }

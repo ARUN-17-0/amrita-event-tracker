@@ -21,6 +21,10 @@ const mockService = {
     const index = memorySubjects.findIndex(s => s.id === id);
     if (index === -1) throw new Error('Not found');
     memorySubjects[index] = { ...memorySubjects[index], ...data, updatedAt: new Date() };
+  },
+  delete: async (id: string): Promise<void> => {
+    await delay(100);
+    memorySubjects = memorySubjects.filter(s => s.id !== id);
   }
 };
 
@@ -43,6 +47,11 @@ const firebaseService = {
   update: async (id: string, data: Partial<Omit<Subject, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
     if (!db) throw new Error('No FB');
     await updateDoc(doc(db, 'subjects', id), { ...data, updatedAt: Timestamp.now() });
+  },
+  delete: async (id: string): Promise<void> => {
+    if (!db) throw new Error('No FB');
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'subjects', id));
   }
 };
 export const subjectService = isMock ? mockService : firebaseService;

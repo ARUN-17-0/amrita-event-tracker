@@ -3,6 +3,7 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Calendar } from '@/components/calendar/Calendar';
 import { EventCard } from '@/components/calendar/EventCard';
 import { AddEventDialog } from '@/components/calendar/AddEventDialog';
+import { EventDetailModal } from '@/components/calendar/EventDetailModal';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useDepartments } from '@/hooks/useDepartments';
@@ -24,6 +25,7 @@ export function CalendarPage() {
   const [filterType, setFilterType] = useState<EventType | ''>('');
   const [addOpen, setAddOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<AcademicEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<AcademicEvent | null>(null);
 
   const isAdmin = user?.role === 'admin';
   const isMentor = user?.role === 'course_mentor';
@@ -131,7 +133,7 @@ export function CalendarPage() {
                 {dailyEvents.length > 0 ? (
                   dailyEvents.map(event => (
                     <div key={event.id} className="relative group">
-                      <EventCard event={event} />
+                      <EventCard event={event} onClick={() => setSelectedEvent(event)} />
                       {canDelete && (
                         <button
                           onClick={() => setEventToDelete(event)}
@@ -182,6 +184,13 @@ export function CalendarPage() {
         onCancel={() => setEventToDelete(null)}
         confirmLabel="Delete Event"
         variant="danger"
+      />
+
+      <EventDetailModal
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        subjectName={subjects.find(s => s.id === selectedEvent?.subjectId)?.name}
+        sectionName={sections.find(s => s.id === selectedEvent?.sectionId)?.name}
       />
     </AdminLayout>
   );

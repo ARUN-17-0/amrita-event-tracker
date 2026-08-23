@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Bell, Settings, LogOut, User } from 'lucide-react';
+import { Menu, Settings, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useNotifications } from '@/hooks/useNotifications';
 
 export interface AdminTopBarProps {
   onMenuToggle: () => void;
@@ -12,7 +11,6 @@ export interface AdminTopBarProps {
 
 export const AdminTopBar: React.FC<AdminTopBarProps> = ({ onMenuToggle, sidebarCollapsed, isMobile }) => {
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -54,14 +52,6 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({ onMenuToggle, sidebarC
 
       {/* Right: notifications + profile */}
       <div className="flex items-center gap-2">
-        {/* Notifications */}
-        <button className="relative p-2 text-text-secondary hover:bg-gray-100 rounded-xl transition-colors">
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full ring-2 ring-surface" />
-          )}
-        </button>
-
         {/* Profile */}
         <div className="relative">
           <button

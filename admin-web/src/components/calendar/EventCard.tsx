@@ -5,9 +5,10 @@ import { Clock, MapPin } from 'lucide-react';
 export interface EventCardProps {
   event: AcademicEvent;
   compact?: boolean;
+  onClick?: () => void;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, compact = false, onClick }) => {
   const getEventColorAndLabel = (type: string) => {
     switch (type) {
       case 'assignment': return { bg: 'bg-blue-500', text: 'text-blue-700', label: 'Assignment' };
@@ -24,7 +25,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) 
 
   if (compact) {
     return (
-      <div className="bg-surface rounded-lg border border-border shadow-sm overflow-hidden flex hover:shadow-md transition-shadow">
+      <div 
+        className={`bg-surface rounded-lg border border-border shadow-sm overflow-hidden flex hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+      >
         <div className={`w-1.5 shrink-0 ${style.bg}`} />
         <div className="p-3 w-full">
           <div className="flex justify-between items-start mb-1">
@@ -43,7 +47,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, compact = false }) 
   }
 
   return (
-    <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden flex hover:shadow-md transition-shadow">
+    <div 
+      className={`bg-surface rounded-xl border border-border shadow-sm overflow-hidden flex hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+    >
       <div className={`w-2 shrink-0 ${style.bg}`} />
       <div className="p-4 w-full flex flex-col">
         <div className="flex justify-between items-start mb-2">

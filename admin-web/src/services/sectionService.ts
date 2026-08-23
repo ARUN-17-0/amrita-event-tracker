@@ -31,6 +31,10 @@ const mockService = {
     await delay(100);
     const index = memorySections.findIndex(s => s.id === sectionId);
     if (index !== -1) memorySections[index] = { ...memorySections[index], crUserId: undefined, updatedAt: new Date() };
+  },
+  delete: async (id: string): Promise<void> => {
+    await delay(100);
+    memorySections = memorySections.filter(s => s.id !== id);
   }
 };
 
@@ -61,6 +65,11 @@ const firebaseService = {
   removeCR: async (sectionId: string): Promise<void> => {
     if (!db) throw new Error('No FB');
     await updateDoc(doc(db, 'sections', sectionId), { crUserId: null, updatedAt: Timestamp.now() });
+  },
+  delete: async (id: string): Promise<void> => {
+    if (!db) throw new Error('No FB');
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'sections', id));
   }
 };
 export const sectionService = isMock ? mockService : firebaseService;

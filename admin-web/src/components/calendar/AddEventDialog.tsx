@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { X, AlertCircle } from "lucide-react";
 import { AcademicEvent, EventType, UserProfile, Subject, Section } from "@/types";
 
@@ -63,6 +63,32 @@ export function AddEventDialog({ open, onClose, onSubmit, currentUser, subjects,
     const section = sections.find(s => s.id === form.sectionId);
     const subject = subjects.find(s => s.id === form.subjectId);
 
+    if (form.sectionId === '__all__') {
+      setLoading(true);
+      const deptSections = sections.filter(s => s.departmentId === currentUser.departmentId);
+      let anyError = '';
+      for (const sec of deptSections) {
+        const result = await onSubmit({
+          title: form.title,
+          type: form.type,
+          description: form.description,
+          subjectId: form.subjectId,
+          sectionId: sec.id,
+          departmentId: sec.departmentId,
+          semesterId: subject?.semesterId ?? "",
+          eventDate: new Date(form.eventDate + "T00:00:00"),
+          eventTime: form.eventTime,
+          createdBy: currentUser.uid,
+          isActive: true,
+        });
+        if (!result.ok) { anyError = result.message; break; }
+      }
+      setLoading(false);
+      if (anyError) { setRuleError(anyError); return; }
+      onClose();
+      return;
+    }
+
     setLoading(true);
     const result = await onSubmit({
       title: form.title,
@@ -124,6 +150,7 @@ export function AddEventDialog({ open, onClose, onSubmit, currentUser, subjects,
               <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
               <select required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary" value={form.sectionId} onChange={e => { set("sectionId", e.target.value); set("subjectId", ""); }}>
                 <option value="">Select Section</option>
+                {isMentor && form.type === 'quiz' && <option value="__all__">All Classes (Dept-wide)</option>}
                 {availableSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>

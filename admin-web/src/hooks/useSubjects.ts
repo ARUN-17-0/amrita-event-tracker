@@ -17,6 +17,7 @@ export const useSubjects = () => {
 
   const addSubject = async (d: any) => { await subjectService.create(d); await fetch(); };
   const updateSubject = async (id: string, d: any) => { await subjectService.update(id, d); await fetch(); };
+  const deleteSubject = async (id: string) => { await subjectService.delete(id); await fetch(); };
 
-  return { subjects, data: subjects, loading, error, refresh: fetch, addSubject, updateSubject };
+  return { subjects, data: subjects, loading, error, refresh: fetch, addSubject, updateSubject, deleteSubject };
 };

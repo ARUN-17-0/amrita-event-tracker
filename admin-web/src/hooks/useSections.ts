@@ -19,6 +19,7 @@ export const useSections = () => {
   const updateSection = async (id: string, d: any) => { await sectionService.update(id, d); await fetch(); };
   const assignCR = async (sid: string, uid: string) => { await sectionService.assignCR(sid, uid); await fetch(); };
   const removeCR = async (sid: string) => { await sectionService.removeCR(sid); await fetch(); };
+  const deleteSection = async (id: string) => { await sectionService.delete(id); await fetch(); };
 
-  return { sections, data: sections, loading, error, refresh: fetch, addSection, updateSection, assignCR, removeCR };
+  return { sections, data: sections, loading, error, refresh: fetch, addSection, updateSection, assignCR, removeCR, deleteSection };
 };

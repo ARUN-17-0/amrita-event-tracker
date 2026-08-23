@@ -10,6 +10,7 @@ import { useDepartments } from '@/hooks/useDepartments';
 import { useSections } from '@/hooks/useSections';
 import { UserProfile, TableColumn } from '@/types';
 import { Plus, Edit, Upload, Trash2 } from 'lucide-react';
+import { registerMockCredential } from '@/services/authService';
 
 export function StudentsPage() {
   const navigate = useNavigate();
@@ -18,12 +19,13 @@ export function StudentsPage() {
   const { sections } = useSections();
   
   const [search, setSearch] = useState('');
+  const [filterDept, setFilterDept] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<UserProfile | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<UserProfile | null>(null);
 
-  const [formData, setFormData] = useState({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '', password: '', confirmPassword: '', changePassword: '' });
   const [formLoading, setFormLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
@@ -38,9 +40,10 @@ export function StudentsPage() {
   };
 
   const filtered = students.filter(s => 
-    s.fullName.toLowerCase().includes(search.toLowerCase()) || 
+    (s.fullName.toLowerCase().includes(search.toLowerCase()) || 
     s.email.toLowerCase().includes(search.toLowerCase()) ||
-    (s.rollNo && s.rollNo.toLowerCase().includes(search.toLowerCase()))
+    (s.rollNo && s.rollNo.toLowerCase().includes(search.toLowerCase()))) &&
+    (!filterDept || s.departmentId === filterDept)
   );
 
   const columns: TableColumn<UserProfile>[] = [
@@ -70,7 +73,7 @@ export function StudentsPage() {
 
   const handleOpenAdd = () => {
     setEditingStudent(null);
-    setFormData({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '', password: '', confirmPassword: '' });
+    setFormData({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '', password: '', confirmPassword: '', changePassword: '' });
     setPasswordError('');
     setDialogOpen(true);
   };
@@ -84,7 +87,8 @@ export function StudentsPage() {
       departmentId: stu.departmentId || '',
       sectionId: stu.sectionId || '',
       password: '',
-      confirmPassword: ''
+      confirmPassword: '',
+      changePassword: ''
     });
     setPasswordError('');
     setDialogOpen(true);
@@ -113,6 +117,9 @@ export function StudentsPage() {
     try {
       if (editingStudent) {
         await updateStudent(editingStudent.uid, formData);
+        if (formData.changePassword) {
+          registerMockCredential(editingStudent, formData.changePassword);
+        }
       } else {
         await addStudent(formData);
       }
@@ -169,8 +176,18 @@ export function StudentsPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search students by name, email, or roll number..." />
+        <div className="p-4 border-b border-gray-100 flex gap-2 flex-col sm:flex-row">
+          <div className="flex-1">
+            <SearchBar value={search} onChange={setSearch} placeholder="Search students by name, email, or roll number..." />
+          </div>
+          <select 
+            value={filterDept} 
+            onChange={e => setFilterDept(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-48"
+          >
+            <option value="">All Depts</option>
+            {departments.map(d => <option key={d.id} value={d.id}>{d.code}</option>)}
+          </select>
         </div>
         <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No students found." />
       </div>
@@ -236,6 +253,13 @@ export function StudentsPage() {
               </select>
             </div>
           </div>
+
+          {editingStudent && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">New Password (leave blank to keep current)</label>
+              <input type="password" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" placeholder="Enter new password" value={formData.changePassword} onChange={e => setFormData({...formData, changePassword: e.target.value})} />
+            </div>
+          )}
 
           {editingStudent && (
             <div className="pt-3 border-t border-gray-100 flex justify-between items-center">

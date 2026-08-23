@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AcademicEvent } from '@/types';
 
@@ -6,22 +6,25 @@ export interface CalendarProps {
   events: AcademicEvent[];
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
-  onMonthChange: (year: number, month: number) => void;
+  onMonthChange?: (year: number, month: number) => void;
 }
 
 export const Calendar: React.FC<CalendarProps> = ({ events, selectedDate, onDateSelect, onMonthChange }) => {
-  const year = selectedDate.getFullYear();
-  const month = selectedDate.getMonth();
+  const [viewDate, setViewDate] = useState(() => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
   const today = new Date();
 
   const handlePrevMonth = () => {
-    if (month === 0) onMonthChange(year - 1, 11);
-    else onMonthChange(year, month - 1);
+    const d = new Date(year, month - 1, 1);
+    setViewDate(d);
+    onMonthChange?.(d.getFullYear(), d.getMonth());
   };
 
   const handleNextMonth = () => {
-    if (month === 11) onMonthChange(year + 1, 0);
-    else onMonthChange(year, month + 1);
+    const d = new Date(year, month + 1, 1);
+    setViewDate(d);
+    onMonthChange?.(d.getFullYear(), d.getMonth());
   };
 
   const getDaysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
@@ -32,19 +35,16 @@ export const Calendar: React.FC<CalendarProps> = ({ events, selectedDate, onDate
   
   const days = [];
   
-  // Previous month days
   for (let i = 0; i < firstDayOfMonth; i++) {
     const date = new Date(year, month - 1, daysInPrevMonth - firstDayOfMonth + i + 1);
     days.push({ date, isCurrentMonth: false });
   }
   
-  // Current month days
   for (let i = 1; i <= daysInMonth; i++) {
     const date = new Date(year, month, i);
     days.push({ date, isCurrentMonth: true });
   }
   
-  // Next month days to complete 42 cells (6 rows x 7 cols)
   const remainingCells = 42 - days.length;
   for (let i = 1; i <= remainingCells; i++) {
     const date = new Date(year, month + 1, i);
