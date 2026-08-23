@@ -1,7 +1,8 @@
-import { UserProfile } from '../types';
+﻿import { UserProfile } from '../types';
 import { mockFaculty } from '../mock/data';
-import { db } from '../config/firebase';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, Timestamp, query, where } from 'firebase/firestore';
+import { db, secondaryAuth } from '../config/firebase';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp, query, where } from 'firebase/firestore';
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 let memoryFaculty = [...mockFaculty];
@@ -31,7 +32,7 @@ const mockService = {
 const firebaseService = {
   getAll: async (): Promise<UserProfile[]> => {
     if (!db) throw new Error('No FB');
-    const qs = await getDocs(query(collection(db, 'profiles'), where('role', '==', 'faculty')));
+    const qs = await getDocs(query(collection(db, 'profiles'), where('role', 'in', ['faculty', 'course_mentor', 'admin'])));
     return qs.docs.map(d => ({ ...d.data(), uid: d.id, createdAt: d.data().createdAt?.toDate(), updatedAt: d.data().updatedAt?.toDate() } as UserProfile));
   },
   getById: async (uid: string): Promise<UserProfile | null> => {
@@ -39,13 +40,17 @@ const firebaseService = {
     const snap = await getDoc(doc(db, 'profiles', uid));
     return snap.exists() ? { ...snap.data(), uid: snap.id, createdAt: snap.data().createdAt?.toDate(), updatedAt: snap.data().updatedAt?.toDate() } as UserProfile : null;
   },
-  create: async (data: Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'>): Promise<UserProfile> => {
-    // In a real app, you would create auth user then profile
-    if (!db) throw new Error('No FB');
-    const uid = `temp-${Date.now()}`;
-    const newFac = { ...data, role: 'faculty', createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
-    await setDoc(doc(db, 'profiles', uid), newFac);
-    return { ...data, uid, createdAt: new Date(), updatedAt: new Date() } as UserProfile;
+  create: async (data: Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'> & { password?: string }): Promise<UserProfile> => {
+    if (!db || !secondaryAuth) throw new Error('No FB');
+    const password = (data as any).password || 'Amrita@123';
+    // Create Firebase Auth user via secondary app (doesn't displace admin session)
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, data.email, password);
+    await signOut(secondaryAuth);
+    const uid = cred.user.uid;
+    const { password: _pw, ...profileData } = data as any;
+    const profile: UserProfile = { ...profileData, uid, isActive: true, createdAt: new Date(), updatedAt: new Date() };
+    await setDoc(doc(db, 'profiles', uid), { ...profile, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
+    return profile;
   },
   update: async (uid: string, data: Partial<Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
     if (!db) throw new Error('No FB');
@@ -53,8 +58,8 @@ const firebaseService = {
   },
   delete: async (uid: string): Promise<void> => {
     if (!db) throw new Error('No FB');
-    const { deleteDoc } = await import('firebase/firestore');
     await deleteDoc(doc(db, 'profiles', uid));
   }
 };
+
 export const facultyService = isMock ? mockService : firebaseService;

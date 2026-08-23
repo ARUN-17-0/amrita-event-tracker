@@ -1,7 +1,8 @@
-import { UserProfile, BulkImportRow, BulkImportResult } from '../types';
+﻿import { UserProfile, BulkImportRow, BulkImportResult } from '../types';
 import { mockStudents } from '../mock/data';
-import { db } from '../config/firebase';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, Timestamp, query, where } from 'firebase/firestore';
+import { db, secondaryAuth } from '../config/firebase';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp, query, where } from 'firebase/firestore';
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 let memoryStudents = [...mockStudents];
@@ -30,19 +31,12 @@ const mockService = {
     await delay(500);
     const res: BulkImportResult = { imported: 0, skipped: 0, failed: 0, errors: [] };
     for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row.email || !row.rollNo || !row.fullName) {
-            res.failed++;
-            res.errors.push({ row: i+1, field: 'all', message: 'Missing required fields' });
-            continue;
-        }
-        const exists = memoryStudents.some(s => s.email === row.email || s.rollNo === row.rollNo);
-        if (exists) {
-            res.skipped++;
-            continue;
-        }
-        memoryStudents.push({ uid: `stu-${Date.now()}-${i}`, fullName: row.fullName, email: row.email, role: 'student', rollNo: row.rollNo, isActive: true, createdAt: new Date(), updatedAt: new Date() } as UserProfile);
-        res.imported++;
+      const row = rows[i];
+      if (!row.email || !row.rollNo || !row.fullName) { res.failed++; res.errors.push({ row: i+1, field: 'all', message: 'Missing required fields' }); continue; }
+      const exists = memoryStudents.some(s => s.email === row.email || s.rollNo === row.rollNo);
+      if (exists) { res.skipped++; continue; }
+      memoryStudents.push({ uid: `stu-${Date.now()}-${i}`, fullName: row.fullName, email: row.email, role: 'student', rollNo: row.rollNo, isActive: true, createdAt: new Date(), updatedAt: new Date() } as UserProfile);
+      res.imported++;
     }
     return res;
   }
@@ -59,12 +53,16 @@ const firebaseService = {
     const snap = await getDoc(doc(db, 'profiles', uid));
     return snap.exists() ? { ...snap.data(), uid: snap.id, createdAt: snap.data().createdAt?.toDate(), updatedAt: snap.data().updatedAt?.toDate() } as UserProfile : null;
   },
-  create: async (data: Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'>): Promise<UserProfile> => {
-    if (!db) throw new Error('No FB');
-    const uid = `temp-${Date.now()}`;
-    const newStu = { ...data, role: data.role || 'student', createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
-    await setDoc(doc(db, 'profiles', uid), newStu);
-    return { ...data, uid, createdAt: new Date(), updatedAt: new Date() } as UserProfile;
+  create: async (data: Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'> & { password?: string }): Promise<UserProfile> => {
+    if (!db || !secondaryAuth) throw new Error('No FB');
+    const password = (data as any).password || 'Amrita@123';
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, data.email, password);
+    await signOut(secondaryAuth);
+    const uid = cred.user.uid;
+    const { password: _pw, confirmPassword: _cp, ...profileData } = data as any;
+    const profile: UserProfile = { ...profileData, uid, role: profileData.role || 'student', isActive: true, createdAt: new Date(), updatedAt: new Date() };
+    await setDoc(doc(db, 'profiles', uid), { ...profile, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
+    return profile;
   },
   update: async (uid: string, data: Partial<Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
     if (!db) throw new Error('No FB');
@@ -72,12 +70,29 @@ const firebaseService = {
   },
   delete: async (uid: string): Promise<void> => {
     if (!db) throw new Error('No FB');
-    const { deleteDoc } = await import('firebase/firestore');
+    // Delete Firestore profile (Auth user remains but can't log in without a profile)
     await deleteDoc(doc(db, 'profiles', uid));
   },
   bulkImport: async (rows: BulkImportRow[]): Promise<BulkImportResult> => {
-    // Basic mock implementation for FB as well
-    return { imported: rows.length, skipped: 0, failed: 0, errors: [] };
+    if (!db || !secondaryAuth) throw new Error('No FB');
+    const res: BulkImportResult = { imported: 0, skipped: 0, failed: 0, errors: [] };
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row.email || !row.rollNo || !row.fullName) { res.failed++; res.errors.push({ row: i+1, field: 'all', message: 'Missing fields' }); continue; }
+      try {
+        const password = row.password || 'Amrita@123';
+        const cred = await createUserWithEmailAndPassword(secondaryAuth, row.email, password);
+        await signOut(secondaryAuth);
+        const profile: UserProfile = { uid: cred.user.uid, fullName: row.fullName, email: row.email, role: 'student', rollNo: row.rollNo, isActive: true, createdAt: new Date(), updatedAt: new Date() };
+        await setDoc(doc(db, 'profiles', cred.user.uid), { ...profile, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
+        res.imported++;
+      } catch (e: any) {
+        if (e.code === 'auth/email-already-in-use') res.skipped++;
+        else { res.failed++; res.errors.push({ row: i+1, field: 'email', message: e.message }); }
+      }
+    }
+    return res;
   }
 };
+
 export const studentService = isMock ? mockService : firebaseService;

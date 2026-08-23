@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, AuthContextType } from '../types';
 import { authService } from '../services/authService';
 
@@ -10,13 +10,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    authService.getCurrentUser().then(u => {
+    // onAuthStateChanged returns an unsubscribe function.
+    // In mock mode it fires synchronously and returns a no-op.
+    const unsub = authService.onAuthStateChanged((u) => {
       setUser(u);
       setLoading(false);
-    }).catch(e => {
-      console.error(e);
-      setLoading(false);
     });
+    return unsub;
   }, []);
 
   const login = async (email: string, pass: string) => {
