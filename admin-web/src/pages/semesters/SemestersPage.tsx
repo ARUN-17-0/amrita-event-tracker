@@ -11,6 +11,8 @@ import { Plus, Edit, Star, PowerOff } from 'lucide-react';
 export function SemestersPage() {
   const { semesters, loading, addSemester, updateSemester, toggleSemester, setCurrentSemester } = useSemesters();
   const [search, setSearch] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'active' | 'inactive' | ''>('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSem, setEditingSem] = useState<Semester | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -19,9 +21,13 @@ export function SemestersPage() {
   const [formData, setFormData] = useState({ name: '', year: '', startDate: '', endDate: '' });
   const [formLoading, setFormLoading] = useState(false);
 
+  const uniqueYears = Array.from(new Set(semesters.map(s => s.year)));
+
   const filtered = semesters.filter(s => 
-    s.name.toLowerCase().includes(search.toLowerCase()) || 
-    s.year.includes(search)
+    (s.name.toLowerCase().includes(search.toLowerCase()) || 
+    s.year.includes(search)) &&
+    (!filterYear || s.year === filterYear) &&
+    (!filterStatus || (filterStatus === 'active' ? s.isActive : !s.isActive))
   );
 
   const columns: TableColumn<Semester>[] = [
@@ -140,8 +146,27 @@ export function SemestersPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search semesters..." />
+        <div className="p-4 border-b border-gray-100 flex gap-2 flex-col sm:flex-row">
+          <div className="flex-1">
+            <SearchBar value={search} onChange={setSearch} placeholder="Search semesters..." />
+          </div>
+          <select 
+            value={filterYear} 
+            onChange={e => setFilterYear(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-40"
+          >
+            <option value="">All Years</option>
+            {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select 
+            value={filterStatus} 
+            onChange={e => setFilterStatus(e.target.value as any)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-40"
+          >
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
         <DataTable
           columns={columns}

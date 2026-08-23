@@ -19,6 +19,8 @@ export function SubjectsPage() {
   const { semesters } = useSemesters();
   
   const [search, setSearch] = useState('');
+  const [filterDept, setFilterDept] = useState('');
+  const [filterSem, setFilterSem] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSub, setEditingSub] = useState<Subject | null>(null);
   const [subToDelete, setSubToDelete] = useState<Subject | null>(null);
@@ -31,8 +33,10 @@ export function SubjectsPage() {
   const getSemName = (id: string) => semesters.find(s => s.id === id)?.name || id;
 
   const filtered = subjects.filter(s => 
-    s.name.toLowerCase().includes(search.toLowerCase()) || 
-    s.code.toLowerCase().includes(search.toLowerCase())
+    (s.name.toLowerCase().includes(search.toLowerCase()) || 
+    s.code.toLowerCase().includes(search.toLowerCase())) &&
+    (!filterDept || s.departmentId === filterDept) &&
+    (!filterSem || s.semesterId === filterSem)
   );
 
   const columns: TableColumn<Subject>[] = [
@@ -122,8 +126,26 @@ export function SubjectsPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search subjects by name or code..." />
+        <div className="p-4 border-b border-gray-100 flex gap-2 flex-col sm:flex-row">
+          <div className="flex-1">
+            <SearchBar value={search} onChange={setSearch} placeholder="Search subjects by name or code..." />
+          </div>
+          <select 
+            value={filterDept} 
+            onChange={e => setFilterDept(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-48"
+          >
+            <option value="">All Depts</option>
+            {departments.map(d => <option key={d.id} value={d.id}>{d.code}</option>)}
+          </select>
+          <select 
+            value={filterSem} 
+            onChange={e => setFilterSem(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-48"
+          >
+            <option value="">All Semesters</option>
+            {semesters.map(s => <option key={s.id} value={s.id}>{s.name} - {s.year}</option>)}
+          </select>
         </div>
         <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No subjects found." />
       </div>

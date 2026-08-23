@@ -28,6 +28,8 @@ export interface UserProfile {
   sectionId?: string;
   rollNo?: string;
   employeeId?: string;
+  assignedSubjectIds?: string[];
+  assignedSectionIds?: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -6,6 +6,8 @@ import { FormDialog } from '@/components/common/FormDialog';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useFaculty } from '@/hooks/useFaculty';
 import { useDepartments } from '@/hooks/useDepartments';
+import { useSubjects } from '@/hooks/useSubjects';
+import { useSections } from '@/hooks/useSections';
 import { UserProfile, TableColumn } from '@/types';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { registerMockCredential } from '@/services/authService';
@@ -13,15 +15,18 @@ import { registerMockCredential } from '@/services/authService';
 export function FacultyPage() {
   const { faculty, loading, addFaculty, updateFaculty, deleteFaculty } = useFaculty();
   const { departments } = useDepartments();
+  const { subjects } = useSubjects();
+  const { sections } = useSections();
   
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('');
+  const [filterRole, setFilterRole] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFac, setEditingFac] = useState<UserProfile | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [facToDelete, setFacToDelete] = useState<UserProfile | null>(null);
 
-  const [formData, setFormData] = useState({ fullName: '', email: '', employeeId: '', departmentId: '', role: 'faculty', password: '', confirmPassword: '', changePassword: '' });
+  const [formData, setFormData] = useState({ fullName: '', email: '', employeeId: '', departmentId: '', role: 'faculty', assignedSubjectIds: [] as string[], assignedSectionIds: [] as string[], password: '', confirmPassword: '', changePassword: '' });
   const [formLoading, setFormLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
@@ -34,7 +39,8 @@ export function FacultyPage() {
     (f.fullName.toLowerCase().includes(search.toLowerCase()) || 
     f.email.toLowerCase().includes(search.toLowerCase()) ||
     (f.employeeId && f.employeeId.toLowerCase().includes(search.toLowerCase()))) &&
-    (!filterDept || f.departmentId === filterDept)
+    (!filterDept || f.departmentId === filterDept) &&
+    (!filterRole || f.role === filterRole)
   );
 
   const columns: TableColumn<UserProfile>[] = [
@@ -46,6 +52,15 @@ export function FacultyPage() {
       label: 'Department',
       render: (f) => getDeptName(f.departmentId)
     },
+    { key: 'role', label: 'Role', render: (f) => (
+      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+        f.role === 'course_mentor' ? 'bg-purple-100 text-purple-700' :
+        f.role === 'admin' ? 'bg-red-100 text-red-700' :
+        'bg-gray-100 text-gray-700'
+      }`}>
+        {f.role === 'course_mentor' ? 'Course Mentor' : f.role === 'admin' ? 'Admin' : 'Faculty'}
+      </span>
+    )},
     { 
       key: 'isActive', 
       label: 'Status',
@@ -59,7 +74,7 @@ export function FacultyPage() {
 
   const handleOpenAdd = () => {
     setEditingFac(null);
-    setFormData({ fullName: '', email: '', employeeId: '', departmentId: '', role: 'faculty', password: '', confirmPassword: '', changePassword: '' });
+    setFormData({ fullName: '', email: '', employeeId: '', departmentId: '', role: 'faculty', assignedSubjectIds: [], assignedSectionIds: [], password: '', confirmPassword: '', changePassword: '' });
     setPasswordError('');
     setDialogOpen(true);
   };
@@ -72,6 +87,8 @@ export function FacultyPage() {
       employeeId: fac.employeeId || '', 
       departmentId: fac.departmentId || '',
       role: fac.role || 'faculty',
+      assignedSubjectIds: fac.assignedSubjectIds || [],
+      assignedSectionIds: fac.assignedSectionIds || [],
       password: '',
       confirmPassword: '',
       changePassword: ''
@@ -102,7 +119,8 @@ export function FacultyPage() {
     setFormLoading(true);
     try {
       if (editingFac) {
-        await updateFaculty(editingFac.uid, formData);
+        const { password, confirmPassword, changePassword, ...profileFields } = formData;
+        await updateFaculty(editingFac.uid, profileFields);
         if (formData.changePassword) {
           registerMockCredential(editingFac, formData.changePassword);
         }
@@ -164,6 +182,13 @@ export function FacultyPage() {
           >
             <option value="">All Depts</option>
             {departments.map(d => <option key={d.id} value={d.id}>{d.code}</option>)}
+          </select>
+          <select value={filterRole} onChange={e => setFilterRole(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-40">
+            <option value="">All Roles</option>
+            <option value="faculty">Faculty</option>
+            <option value="course_mentor">Course Mentor</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
         <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No faculty found." />
@@ -232,6 +257,56 @@ export function FacultyPage() {
               <option value="admin">Admin</option>
             </select>
           </div>
+
+          {formData.departmentId && (
+            <div className="space-y-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Assign Subjects</p>
+              <div className="flex flex-wrap gap-2">
+                {subjects.filter(s => s.departmentId === formData.departmentId).map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      const ids = formData.assignedSubjectIds.includes(s.id)
+                        ? formData.assignedSubjectIds.filter(id => id !== s.id)
+                        : [...formData.assignedSubjectIds, s.id];
+                      setFormData({ ...formData, assignedSubjectIds: ids });
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                      formData.assignedSubjectIds.includes(s.id)
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-primary'
+                    }`}
+                  >
+                    {s.code} — {s.name}
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mt-2">Assign Sections / Classes</p>
+              <div className="flex flex-wrap gap-2">
+                {sections.filter(s => s.departmentId === formData.departmentId).map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      const ids = formData.assignedSectionIds.includes(s.id)
+                        ? formData.assignedSectionIds.filter(id => id !== s.id)
+                        : [...formData.assignedSectionIds, s.id];
+                      setFormData({ ...formData, assignedSectionIds: ids });
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                      formData.assignedSectionIds.includes(s.id)
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                    }`}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {editingFac && (
             <div>
