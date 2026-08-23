@@ -24,7 +24,11 @@ const mockService = {
     if (data.isCurrent) memorySemesters.forEach(s => s.isCurrent = false);
     memorySemesters[index] = { ...memorySemesters[index], ...data, updatedAt: new Date() };
   },
-  toggle: async (id: string): Promise<void> => { throw new Error('Toggling not supported for semesters'); },
+  toggle: async (id: string): Promise<void> => {
+    await delay(100);
+    const index = memorySemesters.findIndex(s => s.id === id);
+    if (index !== -1) memorySemesters[index] = { ...memorySemesters[index], isActive: !memorySemesters[index].isActive, updatedAt: new Date() };
+  },
   setCurrent: async (id: string): Promise<void> => {
     await delay(100);
     memorySemesters.forEach(s => { s.isCurrent = s.id === id; s.updatedAt = new Date(); });

@@ -61,6 +61,15 @@ export function StudentsPage() {
       render: (s) => getSecName(s.sectionId)
     },
     { 
+      key: 'role',
+      label: 'Role',
+      render: (s) => (
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${s.role === 'cr' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'}`}>
+          {s.role === 'cr' ? 'CR' : 'Student'}
+        </span>
+      )
+    },
+    { 
       key: 'isActive', 
       label: 'Status',
       render: (s) => (
@@ -99,26 +108,19 @@ export function StudentsPage() {
     setPasswordError('');
 
     if (!editingStudent) {
-      if (!formData.password) {
-        setPasswordError('Password is required');
-        return;
-      }
-      if (formData.password.length < 6) {
-        setPasswordError('Password must be at least 6 characters');
-        return;
-      }
-      if (formData.password !== formData.confirmPassword) {
-        setPasswordError('Passwords do not match');
-        return;
-      }
+      if (!formData.password) { setPasswordError('Password is required'); return; }
+      if (formData.password.length < 6) { setPasswordError('Password must be at least 6 characters'); return; }
+      if (formData.password !== formData.confirmPassword) { setPasswordError('Passwords do not match'); return; }
     }
 
     setFormLoading(true);
     try {
       if (editingStudent) {
-        await updateStudent(editingStudent.uid, formData);
-        if (formData.changePassword) {
-          registerMockCredential(editingStudent, formData.changePassword);
+        // Strip password fields — only pass profile fields
+        const { password, confirmPassword, changePassword, ...profileFields } = formData;
+        await updateStudent(editingStudent.uid, profileFields);
+        if (changePassword) {
+          registerMockCredential(editingStudent, changePassword);
         }
       } else {
         await addStudent(formData);
@@ -142,10 +144,22 @@ export function StudentsPage() {
     }
   };
 
+  const handleToggleRole = async (stu: UserProfile) => {
+    const newRole = stu.role === 'cr' ? 'student' : 'cr';
+    await updateStudent(stu.uid, { role: newRole });
+  };
+
   const actions = (stu: UserProfile) => (
-    <div className="flex space-x-2">
+    <div className="flex space-x-2 items-center">
       <button onClick={() => handleOpenEdit(stu)} className="text-gray-500 hover:text-primary transition-colors p-1" title="Edit">
         <Edit className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => handleToggleRole(stu)}
+        className={`text-xs px-2 py-0.5 rounded-full font-medium border transition-colors ${stu.role === 'cr' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+        title={stu.role === 'cr' ? 'Demote to Student' : 'Promote to CR'}
+      >
+        {stu.role === 'cr' ? 'CR → Student' : 'Make CR'}
       </button>
       <button onClick={() => { setStudentToDelete(stu); setConfirmDeleteOpen(true); }} className="text-red-500 hover:text-red-700 transition-colors p-1" title="Delete">
         <Trash2 className="w-4 h-4" />
