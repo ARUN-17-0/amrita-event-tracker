@@ -17,11 +17,12 @@ export const useFaculty = () => {
   useEffect(() => { fetch(); }, [fetch]);
 
   const addFaculty = async (d: any) => {
-    const { password, confirmPassword, ...profileData } = d;
-    const role = profileData.role || 'faculty';
-    const newUser = await facultyService.create({ ...profileData, role, isActive: true });
-    if (import.meta.env.VITE_USE_MOCK === 'true' && password) {
-      registerMockCredential(newUser, password);
+    const { confirmPassword, changePassword, ...createData } = d;
+    const role = createData.role || 'faculty';
+    // Pass password inside createData so the Firebase service uses it for Auth user creation
+    const newUser = await facultyService.create({ ...createData, role, isActive: true });
+    if (import.meta.env.VITE_USE_MOCK === 'true' && createData.password) {
+      registerMockCredential(newUser, createData.password);
     }
     await fetch();
   };

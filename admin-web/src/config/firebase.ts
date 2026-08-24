@@ -1,5 +1,5 @@
 ﻿import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, inMemoryPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -13,18 +13,21 @@ const firebaseConfig = {
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
-// Primary app — used for the signed-in admin session
+// Primary app — persists the admin session normally
 const app = isMock ? null : initializeApp(firebaseConfig);
 const auth = isMock ? null : getAuth(app!);
-const db = isMock ? null : getFirestore(app!);
+const db   = isMock ? null : getFirestore(app!);
 
-// Secondary app — used ONLY for creating new Auth users
-// so the admin's own session is never displaced.
+// Secondary app — ONLY used for creating new Auth users.
+// Uses inMemoryPersistence so it never touches localStorage
+// and can never interfere with the admin's session.
 let secondaryAuth: ReturnType<typeof getAuth> | null = null;
 if (!isMock) {
   const existing = getApps().find(a => a.name === 'secondary');
   const secondaryApp = existing ?? initializeApp(firebaseConfig, 'secondary');
   secondaryAuth = getAuth(secondaryApp);
+  // Fire-and-forget — set memory persistence so no localStorage is written
+  setPersistence(secondaryAuth, inMemoryPersistence).catch(() => {});
 }
 
 export { app, auth, db, secondaryAuth };
