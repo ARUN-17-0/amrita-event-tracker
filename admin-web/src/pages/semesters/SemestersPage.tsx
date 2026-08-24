@@ -8,6 +8,8 @@ import { useSemesters } from '@/hooks/useSemesters';
 import { Semester, TableColumn } from '@/types';
 import { Plus, Edit, Star, PowerOff, Trash2 } from 'lucide-react';
 
+import { getBatchSemester } from '@/utils/batchUtils';
+
 export function SemestersPage() {
   const { semesters, loading, addSemester, updateSemester, toggleSemester, setCurrentSemester, deleteSemester } = useSemesters();
   const [search, setSearch] = useState('');
@@ -35,9 +37,36 @@ export function SemestersPage() {
   const columns: TableColumn<Semester>[] = [
     { key: 'name', label: 'Batch Name', sortable: true },
     { key: 'year', label: 'Year', sortable: true },
+    {
+      key: 'currentSem',
+      label: 'Current Stage',
+      render: (s) => {
+        const info = getBatchSemester(s.year);
+        if (info.status === 'active') {
+          return (
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              {info.label}
+            </span>
+          );
+        }
+        if (info.status === 'graduated') {
+          return (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+              Graduated
+            </span>
+          );
+        }
+        return (
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            Upcoming
+          </span>
+        );
+      }
+    },
     { 
       key: 'dates', 
-      label: 'Semesters',
+      label: 'Schedule',
       render: (s) => {
         const y = parseInt(s.year) || new Date(s.startDate).getFullYear();
         return (
@@ -50,7 +79,7 @@ export function SemestersPage() {
     },
     { 
       key: 'isCurrent', 
-      label: 'Current Batch',
+      label: 'Active Batch',
       render: (s) => s.isCurrent && <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full flex items-center w-max"><Star className="w-3 h-3 mr-1 fill-current" /> Current</span>
     },
     { 

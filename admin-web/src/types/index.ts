@@ -80,6 +80,7 @@ export interface Subject {
   departmentId: string;
   semesterId: string;
   semesterType?: 'odd' | 'even';
+  semesterNumber?: number;
   credits: number;
   createdAt: Date;
   updatedAt: Date;

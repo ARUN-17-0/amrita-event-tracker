@@ -9,7 +9,7 @@ import { useDepartments } from '@/hooks/useDepartments';
 import { useSemesters } from '@/hooks/useSemesters';
 import { useAuth } from '@/hooks/useAuth';
 import { Subject, TableColumn } from '@/types';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, LayoutGrid, List, BookOpen, GraduationCap, Award } from 'lucide-react';
 
 export function SubjectsPage() {
   const { user } = useAuth();
@@ -19,8 +19,10 @@ export function SubjectsPage() {
   const { semesters } = useSemesters();
   
   const [search, setSearch] = useState('');
-  const [filterDept, setFilterDept] = useState('');
-  const [filterSem, setFilterSem] = useState('');
+  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+  const [selectedSemNumber, setSelectedSemNumber] = useState<number>(0); // 0 = All
+  const [viewMode, setViewMode] = useState<'box' | 'list'>('box');
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSub, setEditingSub] = useState<Subject | null>(null);
   const [subToDelete, setSubToDelete] = useState<Subject | null>(null);
@@ -31,20 +33,26 @@ export function SubjectsPage() {
     code: '',
     departmentId: '',
     semesterId: '',
+    semesterNumber: 1,
     semesterType: 'odd' as 'odd' | 'even',
     credits: 3
   });
   const [formLoading, setFormLoading] = useState(false);
 
   const getDeptName = (id: string) => departments.find(d => d.id === id)?.name || id;
+  const getDeptCode = (id: string) => departments.find(d => d.id === id)?.code || id;
   const getSemName = (id: string) => semesters.find(s => s.id === id)?.name || id;
 
-  const filtered = subjects.filter(s => 
-    (s.name.toLowerCase().includes(search.toLowerCase()) || 
-    s.code.toLowerCase().includes(search.toLowerCase())) &&
-    (!filterDept || s.departmentId === filterDept) &&
-    (!filterSem || s.semesterId === filterSem)
-  );
+  // Filter logic: search, branch tab, semester tab
+  const filtered = subjects.filter(s => {
+    const matchesSearch = (
+      s.name.toLowerCase().includes(search.toLowerCase()) || 
+      s.code.toLowerCase().includes(search.toLowerCase())
+    );
+    const matchesDept = !selectedDeptId || s.departmentId === selectedDeptId;
+    const matchesSemNum = selectedSemNumber === 0 || (s.semesterNumber === selectedSemNumber);
+    return matchesSearch && matchesDept && matchesSemNum;
+  });
 
   const columns: TableColumn<Subject>[] = [
     { key: 'code', label: 'Code', sortable: true },
@@ -52,23 +60,21 @@ export function SubjectsPage() {
     { 
       key: 'department', 
       label: 'Department',
-      render: (s) => getDeptName(s.departmentId)
+      render: (s) => getDeptCode(s.departmentId)
+    },
+    { 
+      key: 'semesterNumber', 
+      label: 'Semester',
+      render: (s) => (
+        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+          {s.semesterNumber ? `Sem ${s.semesterNumber}` : (s.semesterType === 'even' ? 'Even Sem' : 'Odd Sem')}
+        </span>
+      )
     },
     { 
       key: 'batch', 
       label: 'Batch',
-      render: (s) => getSemName(s.semesterId)
-    },
-    { 
-      key: 'semesterType', 
-      label: 'Semester',
-      render: (s) => (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-          s.semesterType === 'even' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'
-        }`}>
-          {s.semesterType === 'even' ? 'Even (Jan–May)' : 'Odd (Jul–Dec)'}
-        </span>
-      )
+      render: (s) => s.semesterId ? getSemName(s.semesterId) : '-'
     },
     { key: 'credits', label: 'Credits', sortable: true }
   ];
@@ -78,9 +84,10 @@ export function SubjectsPage() {
     setFormData({
       name: '',
       code: '',
-      departmentId: '',
-      semesterId: '',
-      semesterType: 'odd',
+      departmentId: selectedDeptId || (departments[0]?.id || ''),
+      semesterId: semesters.find(s => s.isCurrent)?.id || (semesters[0]?.id || ''),
+      semesterNumber: selectedSemNumber > 0 ? selectedSemNumber : 1,
+      semesterType: (selectedSemNumber % 2 === 0 && selectedSemNumber > 0) ? 'even' : 'odd',
       credits: 3
     });
     setDialogOpen(true);
@@ -92,8 +99,9 @@ export function SubjectsPage() {
       name: sub.name,
       code: sub.code,
       departmentId: sub.departmentId,
-      semesterId: sub.semesterId,
-      semesterType: sub.semesterType || 'odd',
+      semesterId: sub.semesterId || '',
+      semesterNumber: sub.semesterNumber || (sub.semesterType === 'even' ? 2 : 1),
+      semesterType: sub.semesterType || (sub.semesterNumber && sub.semesterNumber % 2 === 0 ? 'even' : 'odd'),
       credits: sub.credits
     });
     setDialogOpen(true);
@@ -103,10 +111,15 @@ export function SubjectsPage() {
     e.preventDefault();
     setFormLoading(true);
     try {
+      const isEven = formData.semesterNumber % 2 === 0;
+      const payload = {
+        ...formData,
+        semesterType: isEven ? ('even' as const) : ('odd' as const)
+      };
       if (editingSub) {
-        await updateSubject(editingSub.id, formData);
+        await updateSubject(editingSub.id, payload);
       } else {
-        await addSubject(formData);
+        await addSubject(payload);
       }
       setDialogOpen(false);
     } catch (err) {
@@ -142,10 +155,15 @@ export function SubjectsPage() {
     </div>
   ) : undefined;
 
+  const semesterNumbers = [1, 2, 3, 4, 5, 6, 7, 8];
+
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Subjects</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Subjects</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Filter subjects by Branch and Semester</p>
+        </div>
         {isAdmin && (
           <button 
             onClick={handleOpenAdd}
@@ -157,31 +175,184 @@ export function SubjectsPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex gap-2 flex-col sm:flex-row">
-          <div className="flex-1">
+      {/* Main Container */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden space-y-3 p-4">
+        
+        {/* Branch Selector Tabs */}
+        <div>
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Branch / Department
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedDeptId('')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedDeptId === ''
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All Branches
+            </button>
+            {departments.map(d => (
+              <button
+                key={d.id}
+                onClick={() => setSelectedDeptId(d.id)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  selectedDeptId === d.id
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {d.code} — {d.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Semester Selector Pills */}
+        <div className="pt-2 border-t border-gray-100">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Semester
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setSelectedSemNumber(0)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                selectedSemNumber === 0
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All Semesters
+            </button>
+            {semesterNumbers.map(num => (
+              <button
+                key={num}
+                onClick={() => setSelectedSemNumber(num)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  selectedSemNumber === num
+                    ? num % 2 !== 0 
+                      ? 'bg-orange-600 text-white shadow-sm' 
+                      : 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Sem {num} {num % 2 !== 0 ? '(Odd)' : '(Even)'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search bar & View Mode Toggle */}
+        <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-3 flex-col sm:flex-row">
+          <div className="flex-1 w-full sm:w-auto">
             <SearchBar value={search} onChange={setSearch} placeholder="Search subjects by name or code..." />
           </div>
-          <select 
-            value={filterDept} 
-            onChange={e => setFilterDept(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-48"
-          >
-            <option value="">All Depts</option>
-            {departments.map(d => <option key={d.id} value={d.id}>{d.code}</option>)}
-          </select>
-          <select 
-            value={filterSem} 
-            onChange={e => setFilterSem(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-48"
-          >
-            <option value="">All Batches</option>
-            {semesters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg self-end sm:self-auto shrink-0">
+            <button
+              onClick={() => setViewMode('box')}
+              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                viewMode === 'box'
+                  ? 'bg-white text-gray-900 shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+              title="Box / Grid View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span className="hidden md:inline">Box</span>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white text-gray-900 shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+              title="List / Table View"
+            >
+              <List className="w-4 h-4" />
+              <span className="hidden md:inline">List</span>
+            </button>
+          </div>
         </div>
-        <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No subjects found." />
       </div>
 
+      {/* Content Area: Box vs List */}
+      {viewMode === 'list' ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-4">
+          <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No subjects found matching the filters." />
+        </div>
+      ) : (
+        <div className="mt-4">
+          {loading ? (
+            <div className="p-8 text-center text-sm text-gray-500 bg-white rounded-xl border border-gray-100">
+              Loading subjects...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="p-8 text-center text-sm text-gray-500 bg-white rounded-xl border border-gray-100">
+              No subjects found for this selection.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map(sub => (
+                <div 
+                  key={sub.id} 
+                  className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="px-2.5 py-0.5 rounded-md font-mono text-xs font-bold bg-primary/10 text-primary">
+                        {sub.code}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                          sub.semesterNumber && sub.semesterNumber % 2 === 0
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'bg-orange-50 text-orange-700 border border-orange-200'
+                        }`}>
+                          {sub.semesterNumber ? `Sem ${sub.semesterNumber}` : (sub.semesterType === 'even' ? 'Even Sem' : 'Odd Sem')}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 flex items-center gap-0.5">
+                          <Award className="w-3 h-3" /> {sub.credits} cr
+                        </span>
+                      </div>
+                    </div>
+
+                    <h3 className="font-bold text-gray-900 text-sm mb-1 leading-snug line-clamp-2" title={sub.name}>
+                      {sub.name}
+                    </h3>
+                    
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                      <span className="font-medium text-gray-700">{getDeptName(sub.departmentId)}</span>
+                    </div>
+                  </div>
+
+                  {isAdmin && (
+                    <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => handleOpenEdit(sub)}
+                        className="px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg flex items-center gap-1 transition-colors"
+                      >
+                        <Edit className="w-3.5 h-3.5" /> Edit
+                      </button>
+                      <button 
+                        onClick={() => { setSubToDelete(sub); setConfirmDeleteSubOpen(true); }}
+                        className="px-2.5 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg flex items-center gap-1 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Add / Edit Form Dialog */}
       <FormDialog open={dialogOpen} title={editingSub ? 'Edit Subject' : 'Add Subject'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
         <div className="space-y-4">
           <div>
@@ -190,58 +361,53 @@ export function SubjectsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Subject Code</label>
-            <input type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. 19CSE201" />
+            <input type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. 21CS301" />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department / Branch</label>
               <select required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.departmentId} onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}>
-                <option value="">Select Dept</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.code}</option>)}
+                <option value="">Select Branch</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
-              <select required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.semesterId} onChange={(e) => setFormData({ ...formData, semesterId: e.target.value })}>
-                <option value="">Select Batch</option>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Semester Number</label>
+              <select 
+                required 
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" 
+                value={formData.semesterNumber} 
+                onChange={(e) => {
+                  const num = parseInt(e.target.value) || 1;
+                  setFormData({
+                    ...formData,
+                    semesterNumber: num,
+                    semesterType: num % 2 === 0 ? 'even' : 'odd'
+                  });
+                }}
+              >
+                {semesterNumbers.map(num => (
+                  <option key={num} value={num}>
+                    Semester {num} {num % 2 !== 0 ? '(Odd Sem: Jul–Dec)' : '(Even Sem: Jan–May)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Batch (Optional Link)</label>
+              <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.semesterId} onChange={(e) => setFormData({ ...formData, semesterId: e.target.value })}>
+                <option value="">All / Any Batch</option>
                 {semesters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Semester Schedule</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, semesterType: 'odd' })}
-                className={`py-2.5 px-3 rounded-lg border text-xs font-semibold flex flex-col items-center gap-0.5 transition-all ${
-                  formData.semesterType === 'odd'
-                    ? 'bg-orange-50 text-orange-800 border-orange-500 ring-1 ring-orange-500'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <span>Odd Semester</span>
-                <span className="text-[11px] font-normal text-gray-500">Jul 1 – Dec 31</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, semesterType: 'even' })}
-                className={`py-2.5 px-3 rounded-lg border text-xs font-semibold flex flex-col items-center gap-0.5 transition-all ${
-                  formData.semesterType === 'even'
-                    ? 'bg-blue-50 text-blue-800 border-blue-500 ring-1 ring-blue-500'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <span>Even Semester</span>
-                <span className="text-[11px] font-normal text-gray-500">Jan 1 – May 31</span>
-              </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Credits</label>
+              <input type="number" required min="1" max="10" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.credits} onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) || 1 })} />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Credits</label>
-            <input type="number" required min="1" max="10" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.credits} onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) || 1 })} />
           </div>
         </div>
       </FormDialog>
