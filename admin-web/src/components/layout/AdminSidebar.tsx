@@ -18,7 +18,7 @@ const allNavItems = [
   { path: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard, roles: ['admin', 'faculty', 'course_mentor', 'cr', 'student'] },
   { path: '/calendar',    label: 'Calendar',    icon: CalendarDays,     roles: ['admin', 'faculty', 'course_mentor', 'cr', 'student'] },
   { path: '/departments', label: 'Departments', icon: Building2,        roles: ['admin'] },
-  { path: '/semesters',   label: 'Semesters',   icon: GraduationCap,    roles: ['admin'] },
+  { path: '/semesters',   label: 'Batches',     icon: GraduationCap,    roles: ['admin'] },
   { path: '/sections',    label: 'Sections',    icon: Users,            roles: ['admin', 'faculty', 'course_mentor'] },
   { path: '/subjects',    label: 'Subjects',    icon: BookOpen,         roles: ['admin', 'faculty', 'course_mentor', 'cr', 'student'] },
   { path: '/faculty',     label: 'Faculty',     icon: UserCog,          roles: ['admin'] },

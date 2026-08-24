@@ -51,7 +51,7 @@ export function SectionsPage() {
     },
     { 
       key: 'semester', 
-      label: 'Semester',
+      label: 'Batch',
       render: (s) => getSemName(s.semesterId)
     },
     { 
@@ -168,8 +168,8 @@ export function SectionsPage() {
             onChange={e => setFilterSem(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-48"
           >
-            <option value="">All Semesters</option>
-            {semesters.map(s => <option key={s.id} value={s.id}>{s.name} - {s.year}</option>)}
+            <option value="">All Batches</option>
+            {semesters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No sections found." />
@@ -191,11 +191,11 @@ export function SectionsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
             <select required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.semesterId} onChange={(e) => setFormData({ ...formData, semesterId: e.target.value })}>
-              <option value="">Select Semester</option>
+              <option value="">Select Batch</option>
               {semesters.map(s => (
-                <option key={s.id} value={s.id}>{s.name} - {s.year}</option>
+                <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
           </div>

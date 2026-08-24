@@ -19,6 +19,12 @@ export type RequestStatus = 'pending' | 'approved' | 'rejected';
 
 // --- Core Models ---
 
+export interface BatchAssignment {
+  batchId: string;
+  subjectIds: string[];
+  sectionIds: string[];
+}
+
 export interface UserProfile {
   uid: string;
   fullName: string;
@@ -30,6 +36,7 @@ export interface UserProfile {
   employeeId?: string;
   assignedSubjectIds?: string[];
   assignedSectionIds?: string[];
+  batchAssignments?: BatchAssignment[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -49,6 +56,7 @@ export interface Semester {
   name: string;
   year: string;
   isCurrent: boolean;
+  isActive: boolean;
   startDate: Date;
   endDate: Date;
   createdAt: Date;
@@ -71,6 +79,7 @@ export interface Subject {
   code: string;
   departmentId: string;
   semesterId: string;
+  semesterType?: 'odd' | 'even';
   credits: number;
   createdAt: Date;
   updatedAt: Date;

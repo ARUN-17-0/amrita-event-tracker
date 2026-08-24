@@ -26,7 +26,14 @@ export function SubjectsPage() {
   const [subToDelete, setSubToDelete] = useState<Subject | null>(null);
   const [confirmDeleteSubOpen, setConfirmDeleteSubOpen] = useState(false);
 
-  const [formData, setFormData] = useState({ name: '', code: '', departmentId: '', semesterId: '', credits: 1 });
+  const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    departmentId: '',
+    semesterId: '',
+    semesterType: 'odd' as 'odd' | 'even',
+    credits: 3
+  });
   const [formLoading, setFormLoading] = useState(false);
 
   const getDeptName = (id: string) => departments.find(d => d.id === id)?.name || id;
@@ -48,22 +55,47 @@ export function SubjectsPage() {
       render: (s) => getDeptName(s.departmentId)
     },
     { 
-      key: 'semester', 
-      label: 'Semester',
+      key: 'batch', 
+      label: 'Batch',
       render: (s) => getSemName(s.semesterId)
+    },
+    { 
+      key: 'semesterType', 
+      label: 'Semester',
+      render: (s) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          s.semesterType === 'even' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'
+        }`}>
+          {s.semesterType === 'even' ? 'Even (Jan–May)' : 'Odd (Jul–Dec)'}
+        </span>
+      )
     },
     { key: 'credits', label: 'Credits', sortable: true }
   ];
 
   const handleOpenAdd = () => {
     setEditingSub(null);
-    setFormData({ name: '', code: '', departmentId: '', semesterId: '', credits: 3 });
+    setFormData({
+      name: '',
+      code: '',
+      departmentId: '',
+      semesterId: '',
+      semesterType: 'odd',
+      credits: 3
+    });
     setDialogOpen(true);
   };
 
   const handleOpenEdit = (sub: Subject) => {
     setEditingSub(sub);
-    setFormData({ name: sub.name, code: sub.code, departmentId: sub.departmentId, semesterId: sub.semesterId, credits: sub.credits });
+    setFormData({
+      name: sub.name,
+      code: sub.code,
+      departmentId: sub.departmentId,
+      semesterId: sub.semesterId,
+      semesterType: sub.semesterType || 'odd',
+      credits: sub.credits
+    });
     setDialogOpen(true);
   };
 
@@ -143,8 +175,8 @@ export function SubjectsPage() {
             onChange={e => setFilterSem(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-48"
           >
-            <option value="">All Semesters</option>
-            {semesters.map(s => <option key={s.id} value={s.id}>{s.name} - {s.year}</option>)}
+            <option value="">All Batches</option>
+            {semesters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No subjects found." />
@@ -169,16 +201,47 @@ export function SubjectsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
               <select required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.semesterId} onChange={(e) => setFormData({ ...formData, semesterId: e.target.value })}>
-                <option value="">Select Sem</option>
+                <option value="">Select Batch</option>
                 {semesters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Semester Schedule</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, semesterType: 'odd' })}
+                className={`py-2.5 px-3 rounded-lg border text-xs font-semibold flex flex-col items-center gap-0.5 transition-all ${
+                  formData.semesterType === 'odd'
+                    ? 'bg-orange-50 text-orange-800 border-orange-500 ring-1 ring-orange-500'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span>Odd Semester</span>
+                <span className="text-[11px] font-normal text-gray-500">Jul 1 – Dec 31</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, semesterType: 'even' })}
+                className={`py-2.5 px-3 rounded-lg border text-xs font-semibold flex flex-col items-center gap-0.5 transition-all ${
+                  formData.semesterType === 'even'
+                    ? 'bg-blue-50 text-blue-800 border-blue-500 ring-1 ring-blue-500'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span>Even Semester</span>
+                <span className="text-[11px] font-normal text-gray-500">Jan 1 – May 31</span>
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Credits</label>
-            <input type="number" required min="1" max="10" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.credits} onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) })} />
+            <input type="number" required min="1" max="10" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.credits} onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) || 1 })} />
           </div>
         </div>
       </FormDialog>

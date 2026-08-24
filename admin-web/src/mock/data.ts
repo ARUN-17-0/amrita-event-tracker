@@ -28,10 +28,10 @@ export const mockDepartments: Department[] = [
 ];
 
 export const mockSemesters: Semester[] = [
-  { id: 'sem-001', name: 'Odd Semester 2023', year: '2023', isCurrent: false, startDate: new Date('2023-08-01'), endDate: new Date('2023-12-31'), createdAt: subDays(now, 300), updatedAt: subDays(now, 300) },
-  { id: 'sem-002', name: 'Even Semester 2024', year: '2024', isCurrent: false, startDate: new Date('2024-01-15'), endDate: new Date('2024-05-31'), createdAt: subDays(now, 200), updatedAt: subDays(now, 200) },
-  { id: 'sem-003', name: 'Odd Semester 2024', year: '2024', isCurrent: true, startDate: new Date('2024-08-01'), endDate: new Date('2024-12-31'), createdAt: subDays(now, 30), updatedAt: subDays(now, 10) },
-  { id: 'sem-004', name: 'Even Semester 2025', year: '2025', isCurrent: false, startDate: new Date('2025-01-15'), endDate: new Date('2025-05-31'), createdAt: subDays(now, 10), updatedAt: subDays(now, 10) }
+  { id: 'sem-001', name: '2022 Batch', year: '2022', isCurrent: false, isActive: false, startDate: new Date('2022-07-01'), endDate: new Date('2023-05-31'), createdAt: subDays(now, 300), updatedAt: subDays(now, 300) },
+  { id: 'sem-002', name: '2023 Batch', year: '2023', isCurrent: false, isActive: false, startDate: new Date('2023-07-01'), endDate: new Date('2024-05-31'), createdAt: subDays(now, 200), updatedAt: subDays(now, 200) },
+  { id: 'sem-003', name: '2024 Batch', year: '2024', isCurrent: true, isActive: true, startDate: new Date('2024-07-01'), endDate: new Date('2025-05-31'), createdAt: subDays(now, 30), updatedAt: subDays(now, 10) },
+  { id: 'sem-004', name: '2025 Batch', year: '2025', isCurrent: false, isActive: true, startDate: new Date('2025-07-01'), endDate: new Date('2026-05-31'), createdAt: subDays(now, 10), updatedAt: subDays(now, 10) }
 ];
 
 export const mockSections: Section[] = [
@@ -46,16 +46,16 @@ export const mockSections: Section[] = [
 ];
 
 export const mockSubjects: Subject[] = [
-  { id: 'sub-001', name: 'Data Structures and Algorithms', code: '21CS301', departmentId: 'dept-001', semesterId: 'sem-003', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
-  { id: 'sub-002', name: 'Database Management Systems', code: '21CS302', departmentId: 'dept-001', semesterId: 'sem-003', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
-  { id: 'sub-003', name: 'Computer Networks', code: '21CS303', departmentId: 'dept-001', semesterId: 'sem-003', credits: 3, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
-  { id: 'sub-004', name: 'Operating Systems', code: '21CS304', departmentId: 'dept-001', semesterId: 'sem-003', credits: 3, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
-  { id: 'sub-005', name: 'Digital Signal Processing', code: '21EC301', departmentId: 'dept-002', semesterId: 'sem-003', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
-  { id: 'sub-006', name: 'Microprocessors and Microcontrollers', code: '21EC302', departmentId: 'dept-002', semesterId: 'sem-003', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
-  { id: 'sub-007', name: 'Control Systems', code: '21EE301', departmentId: 'dept-003', semesterId: 'sem-003', credits: 3, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
-  { id: 'sub-008', name: 'Power Electronics', code: '21EE302', departmentId: 'dept-003', semesterId: 'sem-003', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
-  { id: 'sub-009', name: 'Thermodynamics', code: '21ME301', departmentId: 'dept-004', semesterId: 'sem-003', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
-  { id: 'sub-010', name: 'Fluid Mechanics', code: '21CE301', departmentId: 'dept-005', semesterId: 'sem-003', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) }
+  { id: 'sub-001', name: 'Data Structures and Algorithms', code: '21CS301', departmentId: 'dept-001', semesterId: 'sem-003', semesterType: 'odd', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
+  { id: 'sub-002', name: 'Database Management Systems', code: '21CS302', departmentId: 'dept-001', semesterId: 'sem-003', semesterType: 'odd', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
+  { id: 'sub-003', name: 'Computer Networks', code: '21CS303', departmentId: 'dept-001', semesterId: 'sem-003', semesterType: 'even', credits: 3, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
+  { id: 'sub-004', name: 'Operating Systems', code: '21CS304', departmentId: 'dept-001', semesterId: 'sem-003', semesterType: 'even', credits: 3, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
+  { id: 'sub-005', name: 'Digital Signal Processing', code: '21EC301', departmentId: 'dept-002', semesterId: 'sem-003', semesterType: 'odd', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
+  { id: 'sub-006', name: 'Microprocessors and Microcontrollers', code: '21EC302', departmentId: 'dept-002', semesterId: 'sem-003', semesterType: 'even', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
+  { id: 'sub-007', name: 'Control Systems', code: '21EE301', departmentId: 'dept-003', semesterId: 'sem-003', semesterType: 'odd', credits: 3, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
+  { id: 'sub-008', name: 'Power Electronics', code: '21EE302', departmentId: 'dept-003', semesterId: 'sem-003', semesterType: 'even', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
+  { id: 'sub-009', name: 'Thermodynamics', code: '21ME301', departmentId: 'dept-004', semesterId: 'sem-003', semesterType: 'odd', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) },
+  { id: 'sub-010', name: 'Fluid Mechanics', code: '21CE301', departmentId: 'dept-005', semesterId: 'sem-003', semesterType: 'odd', credits: 4, createdAt: subDays(now, 200), updatedAt: subDays(now, 100) }
 ];
 
 export const mockFaculty: UserProfile[] = [

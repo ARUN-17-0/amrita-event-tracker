@@ -1,4 +1,4 @@
-﻿import { Semester } from '../types';
+import { Semester } from '../types';
 import { mockSemesters } from '../mock/data';
 import { db } from '../config/firebase';
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, Timestamp, writeBatch } from 'firebase/firestore';
@@ -10,9 +10,27 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const mockService = {
   getAll: async (): Promise<Semester[]> => { await delay(100); return [...memorySemesters]; },
   getById: async (id: string): Promise<Semester | null> => { await delay(50); return memorySemesters.find(s => s.id === id) || null; },
-  create: async (data: Omit<Semester, 'id' | 'createdAt' | 'updatedAt'>): Promise<Semester> => {
+  create: async (data: any): Promise<Semester> => {
     await delay(100);
-    const newSem: Semester = { ...data, id: `sem-${Date.now()}`, createdAt: new Date(), updatedAt: new Date() };
+    const year = parseInt(data.year);
+    const name = data.name || `${year} Batch`;
+    const startDate = data.startDate || new Date(`${year}-07-01`);
+    const endDate = data.endDate || new Date(`${year + 1}-05-31`);
+    const isCurrent = data.isCurrent ?? false;
+    const isActive = data.isActive ?? true;
+
+    const newSem: Semester = {
+      ...data,
+      name,
+      year: data.year,
+      startDate,
+      endDate,
+      isCurrent,
+      isActive,
+      id: `sem-${Date.now()}`,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
     if (newSem.isCurrent) memorySemesters.forEach(s => s.isCurrent = false);
     memorySemesters.push(newSem);
     return newSem;
@@ -43,17 +61,55 @@ const firebaseService = {
   getAll: async (): Promise<Semester[]> => {
     if (!db) throw new Error('No FB');
     const qs = await getDocs(collection(db, 'semesters'));
-    return qs.docs.map(d => ({ ...d.data(), id: d.id, startDate: d.data().startDate?.toDate(), endDate: d.data().endDate?.toDate(), createdAt: d.data().createdAt?.toDate(), updatedAt: d.data().updatedAt?.toDate() } as Semester));
+    return qs.docs.map(d => ({
+      ...d.data(),
+      id: d.id,
+      name: d.data().name || `${d.data().year} Batch`,
+      isActive: d.data().isActive ?? true,
+      isCurrent: d.data().isCurrent ?? false,
+      startDate: d.data().startDate?.toDate() || new Date(`${d.data().year || 2024}-07-01`),
+      endDate: d.data().endDate?.toDate() || new Date(`${(parseInt(d.data().year) || 2024) + 1}-05-31`),
+      createdAt: d.data().createdAt?.toDate() || new Date(),
+      updatedAt: d.data().updatedAt?.toDate() || new Date()
+    } as Semester));
   },
   getById: async (id: string): Promise<Semester | null> => {
     if (!db) throw new Error('No FB');
     const snap = await getDoc(doc(db, 'semesters', id));
-    return snap.exists() ? { ...snap.data(), id: snap.id, startDate: snap.data().startDate?.toDate(), endDate: snap.data().endDate?.toDate(), createdAt: snap.data().createdAt?.toDate(), updatedAt: snap.data().updatedAt?.toDate() } as Semester : null;
+    return snap.exists() ? {
+      ...snap.data(),
+      id: snap.id,
+      name: snap.data().name || `${snap.data().year} Batch`,
+      isActive: snap.data().isActive ?? true,
+      isCurrent: snap.data().isCurrent ?? false,
+      startDate: snap.data().startDate?.toDate() || new Date(),
+      endDate: snap.data().endDate?.toDate() || new Date(),
+      createdAt: snap.data().createdAt?.toDate() || new Date(),
+      updatedAt: snap.data().updatedAt?.toDate() || new Date()
+    } as Semester : null;
   },
-  create: async (data: Omit<Semester, 'id' | 'createdAt' | 'updatedAt'>): Promise<Semester> => {
+  create: async (data: any): Promise<Semester> => {
     if (!db) throw new Error('No FB');
-    const ref = await addDoc(collection(db, 'semesters'), { ...data, startDate: Timestamp.fromDate(data.startDate), endDate: Timestamp.fromDate(data.endDate), createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
-    return { ...data, id: ref.id, createdAt: new Date(), updatedAt: new Date() } as Semester;
+    const year = parseInt(data.year);
+    const name = data.name || `${year} Batch`;
+    const startDate = data.startDate || new Date(`${year}-07-01`);
+    const endDate = data.endDate || new Date(`${year + 1}-05-31`);
+    const isCurrent = data.isCurrent ?? false;
+    const isActive = data.isActive ?? true;
+
+    const payload = {
+      ...data,
+      name,
+      year: String(data.year),
+      isCurrent,
+      isActive,
+      startDate: Timestamp.fromDate(startDate),
+      endDate: Timestamp.fromDate(endDate),
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    };
+    const ref = await addDoc(collection(db, 'semesters'), payload);
+    return { ...payload, id: ref.id, startDate, endDate, createdAt: new Date(), updatedAt: new Date() } as Semester;
   },
   update: async (id: string, data: Partial<Omit<Semester, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
     if (!db) throw new Error('No FB');
@@ -65,7 +121,7 @@ const firebaseService = {
   toggle: async (id: string): Promise<void> => {
     if (!db) throw new Error('No FB');
     const snap = await getDoc(doc(db, 'semesters', id));
-    if (snap.exists()) await updateDoc(doc(db, 'semesters', id), { isActive: !snap.data().isActive, updatedAt: Timestamp.now() });
+    if (snap.exists()) await updateDoc(doc(db, 'semesters', id), { isActive: !(snap.data().isActive ?? true), updatedAt: Timestamp.now() });
   },
   setCurrent: async (id: string): Promise<void> => {
     if (!db) throw new Error('No FB');

@@ -8,8 +8,9 @@ import { useFaculty } from '@/hooks/useFaculty';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useSections } from '@/hooks/useSections';
-import { UserProfile, TableColumn } from '@/types';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { useSemesters } from '@/hooks/useSemesters';
+import { UserProfile, TableColumn, BatchAssignment } from '@/types';
+import { Plus, Edit, Trash2, Calendar, BookOpen, Users } from 'lucide-react';
 import { registerMockCredential } from '@/services/authService';
 
 export function FacultyPage() {
@@ -17,6 +18,7 @@ export function FacultyPage() {
   const { departments } = useDepartments();
   const { subjects } = useSubjects();
   const { sections } = useSections();
+  const { semesters } = useSemesters();
   
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('');
@@ -26,7 +28,19 @@ export function FacultyPage() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [facToDelete, setFacToDelete] = useState<UserProfile | null>(null);
 
-  const [formData, setFormData] = useState({ fullName: '', email: '', employeeId: '', departmentId: '', role: 'faculty', assignedSubjectIds: [] as string[], assignedSectionIds: [] as string[], password: '', confirmPassword: '', changePassword: '' });
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    employeeId: '',
+    departmentId: '',
+    role: 'faculty',
+    assignedSubjectIds: [] as string[],
+    assignedSectionIds: [] as string[],
+    batchAssignments: [] as BatchAssignment[],
+    password: '',
+    confirmPassword: '',
+    changePassword: ''
+  });
   const [formLoading, setFormLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
@@ -74,7 +88,19 @@ export function FacultyPage() {
 
   const handleOpenAdd = () => {
     setEditingFac(null);
-    setFormData({ fullName: '', email: '', employeeId: '', departmentId: '', role: 'faculty', assignedSubjectIds: [], assignedSectionIds: [], password: '', confirmPassword: '', changePassword: '' });
+    setFormData({
+      fullName: '',
+      email: '',
+      employeeId: '',
+      departmentId: '',
+      role: 'faculty',
+      assignedSubjectIds: [],
+      assignedSectionIds: [],
+      batchAssignments: [],
+      password: '',
+      confirmPassword: '',
+      changePassword: ''
+    });
     setPasswordError('');
     setDialogOpen(true);
   };
@@ -89,6 +115,7 @@ export function FacultyPage() {
       role: fac.role || 'faculty',
       assignedSubjectIds: fac.assignedSubjectIds || [],
       assignedSectionIds: fac.assignedSectionIds || [],
+      batchAssignments: fac.batchAssignments || [],
       password: '',
       confirmPassword: '',
       changePassword: ''
@@ -259,52 +286,164 @@ export function FacultyPage() {
           </div>
 
           {formData.departmentId && (
-            <div className="space-y-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Assign Subjects</p>
-              <div className="flex flex-wrap gap-2">
-                {subjects.filter(s => s.departmentId === formData.departmentId).map(s => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => {
-                      const ids = formData.assignedSubjectIds.includes(s.id)
-                        ? formData.assignedSubjectIds.filter(id => id !== s.id)
-                        : [...formData.assignedSubjectIds, s.id];
-                      setFormData({ ...formData, assignedSubjectIds: ids });
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                      formData.assignedSubjectIds.includes(s.id)
-                        ? 'bg-primary text-white border-primary'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-primary'
-                    }`}
-                  >
-                    {s.code} — {s.name}
-                  </button>
-                ))}
+            <div className="space-y-4 p-3.5 bg-gray-50 rounded-xl border border-gray-200">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                  Batch Subject & Class Assignments
+                </p>
               </div>
 
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mt-2">Assign Sections / Classes</p>
-              <div className="flex flex-wrap gap-2">
-                {sections.filter(s => s.departmentId === formData.departmentId).map(s => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => {
-                      const ids = formData.assignedSectionIds.includes(s.id)
-                        ? formData.assignedSectionIds.filter(id => id !== s.id)
-                        : [...formData.assignedSectionIds, s.id];
-                      setFormData({ ...formData, assignedSectionIds: ids });
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                      formData.assignedSectionIds.includes(s.id)
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
-                    }`}
-                  >
-                    {s.name}
-                  </button>
-                ))}
-              </div>
+              {semesters.filter(s => s.isActive).length === 0 ? (
+                <p className="text-xs text-gray-500 italic">No active batches found. Please activate or create batches first.</p>
+              ) : (
+                semesters.filter(s => s.isActive).map(batch => {
+                  const existing = formData.batchAssignments.find(a => a.batchId === batch.id) || {
+                    batchId: batch.id,
+                    subjectIds: [],
+                    sectionIds: []
+                  };
+
+                  const toggleSubject = (subId: string) => {
+                    const newSubIds = existing.subjectIds.includes(subId)
+                      ? existing.subjectIds.filter(id => id !== subId)
+                      : [...existing.subjectIds, subId];
+
+                    const updatedAssignments = formData.batchAssignments.filter(a => a.batchId !== batch.id);
+                    if (newSubIds.length > 0 || existing.sectionIds.length > 0) {
+                      updatedAssignments.push({ ...existing, subjectIds: newSubIds });
+                    }
+
+                    // Keep flat list in sync
+                    const allSubs = new Set<string>();
+                    updatedAssignments.forEach(a => a.subjectIds.forEach(id => allSubs.add(id)));
+
+                    setFormData({
+                      ...formData,
+                      batchAssignments: updatedAssignments,
+                      assignedSubjectIds: Array.from(allSubs)
+                    });
+                  };
+
+                  const toggleSection = (secId: string) => {
+                    const newSecIds = existing.sectionIds.includes(secId)
+                      ? existing.sectionIds.filter(id => id !== secId)
+                      : [...existing.sectionIds, secId];
+
+                    const updatedAssignments = formData.batchAssignments.filter(a => a.batchId !== batch.id);
+                    if (existing.subjectIds.length > 0 || newSecIds.length > 0) {
+                      updatedAssignments.push({ ...existing, sectionIds: newSecIds });
+                    }
+
+                    const allSecs = new Set<string>();
+                    updatedAssignments.forEach(a => a.sectionIds.forEach(id => allSecs.add(id)));
+
+                    setFormData({
+                      ...formData,
+                      batchAssignments: updatedAssignments,
+                      assignedSectionIds: Array.from(allSecs)
+                    });
+                  };
+
+                  const deptSubjects = subjects.filter(s => s.departmentId === formData.departmentId && (s.semesterId === batch.id || !s.semesterId));
+                  const deptSections = sections.filter(s => s.departmentId === formData.departmentId && (s.semesterId === batch.id || !s.semesterId));
+
+                  const oddSubjects = deptSubjects.filter(s => s.semesterType !== 'even');
+                  const evenSubjects = deptSubjects.filter(s => s.semesterType === 'even');
+
+                  return (
+                    <div key={batch.id} className="border border-gray-200 rounded-lg p-3 bg-white space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-gray-100 pb-1.5">
+                        <span className="text-sm font-bold text-gray-900">{batch.name}</span>
+                        {batch.isCurrent && (
+                          <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-semibold">
+                            Current Batch
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Odd Sem Subjects */}
+                      {oddSubjects.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-semibold text-orange-800 mb-1 flex items-center gap-1">
+                            <BookOpen className="w-3 h-3" /> Odd Semester Subjects (Jul–Dec)
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {oddSubjects.map(s => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => toggleSubject(s.id)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                                  existing.subjectIds.includes(s.id)
+                                    ? 'bg-orange-600 text-white border-orange-600 shadow-sm'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                                }`}
+                              >
+                                {s.code} — {s.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Even Sem Subjects */}
+                      {evenSubjects.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-semibold text-blue-800 mb-1 flex items-center gap-1">
+                            <BookOpen className="w-3 h-3" /> Even Semester Subjects (Jan–May)
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {evenSubjects.map(s => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => toggleSubject(s.id)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                                  existing.subjectIds.includes(s.id)
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                                }`}
+                              >
+                                {s.code} — {s.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {deptSubjects.length === 0 && (
+                        <p className="text-[11px] text-gray-400 italic">No subjects registered for this batch & department.</p>
+                      )}
+
+                      {/* Sections */}
+                      {deptSections.length > 0 && (
+                        <div className="pt-1.5 border-t border-gray-100">
+                          <p className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                            <Users className="w-3 h-3" /> Sections / Classes
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {deptSections.map(sec => (
+                              <button
+                                key={sec.id}
+                                type="button"
+                                onClick={() => toggleSection(sec.id)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                                  existing.sectionIds.includes(sec.id)
+                                    ? 'bg-primary text-white border-primary shadow-sm'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:border-primary'
+                                }`}
+                              >
+                                {sec.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           )}
 

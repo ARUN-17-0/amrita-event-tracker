@@ -20,7 +20,7 @@ export function SemestersPage() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [semToDelete, setSemToDelete] = useState<Semester | null>(null);
 
-  const [formData, setFormData] = useState({ name: '', year: '', startDate: '', endDate: '' });
+  const [formData, setFormData] = useState({ year: '' });
   const [formLoading, setFormLoading] = useState(false);
 
   const uniqueYears = Array.from(new Set(semesters.map(s => s.year)));
@@ -33,16 +33,24 @@ export function SemestersPage() {
   );
 
   const columns: TableColumn<Semester>[] = [
-    { key: 'name', label: 'Name', sortable: true },
+    { key: 'name', label: 'Batch Name', sortable: true },
     { key: 'year', label: 'Year', sortable: true },
     { 
       key: 'dates', 
-      label: 'Duration',
-      render: (s) => `${s.startDate.toLocaleDateString()} - ${s.endDate.toLocaleDateString()}`
+      label: 'Semesters',
+      render: (s) => {
+        const y = parseInt(s.year) || new Date(s.startDate).getFullYear();
+        return (
+          <div className="text-xs space-y-0.5">
+            <div className="text-orange-700 font-medium">Odd: Jul 1 – Dec 31, {y}</div>
+            <div className="text-blue-700 font-medium">Even: Jan 1 – May 31, {y + 1}</div>
+          </div>
+        );
+      }
     },
     { 
       key: 'isCurrent', 
-      label: 'Current',
+      label: 'Current Batch',
       render: (s) => s.isCurrent && <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full flex items-center w-max"><Star className="w-3 h-3 mr-1 fill-current" /> Current</span>
     },
     { 
@@ -58,18 +66,13 @@ export function SemestersPage() {
 
   const handleOpenAdd = () => {
     setEditingSem(null);
-    setFormData({ name: '', year: '', startDate: '', endDate: '' });
+    setFormData({ year: '' });
     setDialogOpen(true);
   };
 
   const handleOpenEdit = (sem: Semester) => {
     setEditingSem(sem);
-    setFormData({ 
-      name: sem.name, 
-      year: sem.year, 
-      startDate: sem.startDate.toISOString().split('T')[0], 
-      endDate: sem.endDate.toISOString().split('T')[0] 
-    });
+    setFormData({ year: sem.year });
     setDialogOpen(true);
   };
 
@@ -77,11 +80,14 @@ export function SemestersPage() {
     e.preventDefault();
     setFormLoading(true);
     try {
+      const y = parseInt(formData.year) || new Date().getFullYear();
       const payload = {
-        name: formData.name,
-        year: formData.year,
-        startDate: new Date(formData.startDate),
-        endDate: new Date(formData.endDate)
+        year: String(y),
+        name: `${y} Batch`,
+        startDate: new Date(`${y}-07-01`),
+        endDate: new Date(`${y + 1}-05-31`),
+        isActive: editingSem ? editingSem.isActive : true,
+        isCurrent: editingSem ? editingSem.isCurrent : false
       };
       if (editingSem) {
         await updateSemester(editingSem.id, payload);
@@ -130,7 +136,7 @@ export function SemestersPage() {
         <button
           onClick={() => { setConfirmAction({type: 'current', sem}); setConfirmOpen(true); }}
           className="text-yellow-500 hover:text-yellow-700 transition-colors p-1"
-          title="Set as Current"
+          title="Set as Current Batch"
         >
           <Star className="w-4 h-4" />
         </button>
@@ -148,23 +154,25 @@ export function SemestersPage() {
     </div>
   );
 
+  const selectedYearNum = parseInt(formData.year);
+
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Semesters</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Batches</h1>
         <button 
           onClick={handleOpenAdd}
           className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light transition-colors text-sm font-medium"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Semester
+          Create Batch
         </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex gap-2 flex-col sm:flex-row">
           <div className="flex-1">
-            <SearchBar value={search} onChange={setSearch} placeholder="Search semesters..." />
+            <SearchBar value={search} onChange={setSearch} placeholder="Search batches..." />
           </div>
           <select 
             value={filterYear} 
@@ -189,39 +197,48 @@ export function SemestersPage() {
           data={filtered}
           loading={loading}
           actions={actions}
-          emptyMessage="No semesters found."
+          emptyMessage="No batches found."
         />
       </div>
 
-      <FormDialog open={dialogOpen} title={editingSem ? 'Edit Semester' : 'Add Semester'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
+      <FormDialog open={dialogOpen} title={editingSem ? 'Edit Batch' : 'Create Batch'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Odd Semester" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Batch Year</label>
+            <input 
+              type="number" 
+              required 
+              min="2020" 
+              max="2040"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" 
+              value={formData.year} 
+              onChange={(e) => setFormData({ ...formData, year: e.target.value })} 
+              placeholder="e.g. 2025" 
+            />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-            <input type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })} placeholder="e.g. 2024-2025" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input type="date" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
+
+          {selectedYearNum > 2000 && (
+            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-1.5 text-xs text-gray-700">
+              <p className="font-semibold text-gray-900 text-sm">{selectedYearNum} Batch Schedule:</p>
+              <div className="flex items-center justify-between text-orange-800 bg-orange-50 p-2 rounded-lg border border-orange-100">
+                <span className="font-medium">Odd Semester:</span>
+                <span>Jul 1, {selectedYearNum} – Dec 31, {selectedYearNum}</span>
+              </div>
+              <div className="flex items-center justify-between text-blue-800 bg-blue-50 p-2 rounded-lg border border-blue-100">
+                <span className="font-medium">Even Semester:</span>
+                <span>Jan 1, {selectedYearNum + 1} – May 31, {selectedYearNum + 1}</span>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-              <input type="date" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} />
-            </div>
-          </div>
+          )}
         </div>
       </FormDialog>
 
       <ConfirmationDialog
         open={confirmOpen}
-        title={confirmAction?.type === 'toggle' ? (confirmAction.sem.isActive ? 'Deactivate' : 'Activate') : 'Set Current Semester'}
+        title={confirmAction?.type === 'toggle' ? (confirmAction.sem.isActive ? 'Deactivate Batch' : 'Activate Batch') : 'Set Current Batch'}
         message={confirmAction?.type === 'toggle' 
           ? `Are you sure you want to ${confirmAction.sem.isActive ? 'deactivate' : 'activate'} "${confirmAction.sem.name}"?`
-          : `Are you sure you want to set "${confirmAction?.sem.name}" as the current semester?`}
+          : `Are you sure you want to set "${confirmAction?.sem.name}" as the current active batch?`}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
         variant={confirmAction?.type === 'toggle' && confirmAction.sem.isActive ? 'danger' : 'primary'}
@@ -229,7 +246,7 @@ export function SemestersPage() {
 
       <ConfirmationDialog
         open={confirmDeleteOpen}
-        title="Delete Semester"
+        title="Delete Batch"
         message={`Permanently delete "${semToDelete?.name}"? This cannot be undone.`}
         onConfirm={handleDelete}
         onCancel={() => { setConfirmDeleteOpen(false); setSemToDelete(null); }}
