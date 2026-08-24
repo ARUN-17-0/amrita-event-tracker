@@ -22,7 +22,7 @@ export function BulkImportPage() {
   const [result, setResult] = useState<BulkImportResult | null>(null);
 
   const handleDownloadTemplate = () => {
-    const csvContent = "data:text/csv;charset=utf-8,Full Name,College Email,Roll Number,Department Code,Semester,Section\nJohn Doe,john.doe@cb.students.amrita.edu,CB.EN.U4CSE20001,CSE,2024-2025,A";
+    const csvContent = "data:text/csv;charset=utf-8,Full Name,College Email,Roll Number,Department Code,Semester,Section\nJohn Doe,john.doe@blr.students.amrita.edu,BLR.EN.U4CSE20001,CSE,2024-2025,A";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);

@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -172,7 +172,7 @@ export function SettingsPage() {
             <div className="divide-y divide-gray-100 text-sm">
               {[
                 ["Version", "v1.2.0"],
-                ["Institution", "Amrita School of Engineering, CBE"],
+                ["Institution", "Amrita School of Engineering, Bengaluru"],
                 ["Mode", import.meta.env.VITE_USE_MOCK === "true" ? "Mock / Offline" : "Firebase / Live"],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between py-2.5">

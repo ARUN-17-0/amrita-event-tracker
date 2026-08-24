@@ -52,7 +52,7 @@ export function DashboardPage() {
               Welcome, {user?.fullName || 'User'}
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              Amrita School of Engineering, Coimbatore • <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary capitalize">{getRoleBadge()}</span>
+              Amrita School of Engineering, Bengaluru • <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary capitalize">{getRoleBadge()}</span>
             </p>
           </div>
           <Link
