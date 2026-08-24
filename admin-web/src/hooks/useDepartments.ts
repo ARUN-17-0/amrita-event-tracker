@@ -25,6 +25,7 @@ export const useDepartments = () => {
   const addDepartment = async (d: any) => { await departmentService.create(d); await fetch(); };
   const updateDepartment = async (id: string, d: any) => { await departmentService.update(id, d); await fetch(); };
   const toggleDepartment = async (id: string) => { await departmentService.toggle(id); await fetch(); };
+  const deleteDepartment = async (id: string) => { await departmentService.delete(id); await fetch(); };
 
-  return { departments, data: departments, loading, error, refresh: fetch, addDepartment, updateDepartment, toggleDepartment };
+  return { departments, data: departments, loading, error, refresh: fetch, addDepartment, updateDepartment, toggleDepartment, deleteDepartment };
 };

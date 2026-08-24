@@ -6,10 +6,10 @@ import { FormDialog } from '@/components/common/FormDialog';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useSemesters } from '@/hooks/useSemesters';
 import { Semester, TableColumn } from '@/types';
-import { Plus, Edit, Star, PowerOff } from 'lucide-react';
+import { Plus, Edit, Star, PowerOff, Trash2 } from 'lucide-react';
 
 export function SemestersPage() {
-  const { semesters, loading, addSemester, updateSemester, toggleSemester, setCurrentSemester } = useSemesters();
+  const { semesters, loading, addSemester, updateSemester, toggleSemester, setCurrentSemester, deleteSemester } = useSemesters();
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [filterStatus, setFilterStatus] = useState<'active' | 'inactive' | ''>('');
@@ -17,6 +17,8 @@ export function SemestersPage() {
   const [editingSem, setEditingSem] = useState<Semester | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{type: 'toggle' | 'current', sem: Semester} | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [semToDelete, setSemToDelete] = useState<Semester | null>(null);
 
   const [formData, setFormData] = useState({ name: '', year: '', startDate: '', endDate: '' });
   const [formLoading, setFormLoading] = useState(false);
@@ -108,26 +110,40 @@ export function SemestersPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!semToDelete) return;
+    try {
+      await deleteSemester(semToDelete.id);
+      setConfirmDeleteOpen(false);
+      setSemToDelete(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const actions = (sem: Semester) => (
-    <div className="flex space-x-2">
+    <div className="flex space-x-2 items-center">
       <button onClick={() => handleOpenEdit(sem)} className="text-gray-500 hover:text-primary transition-colors p-1" title="Edit">
         <Edit className="w-4 h-4" />
       </button>
       {!sem.isCurrent && sem.isActive && (
-        <button 
-          onClick={() => { setConfirmAction({type: 'current', sem}); setConfirmOpen(true); }} 
+        <button
+          onClick={() => { setConfirmAction({type: 'current', sem}); setConfirmOpen(true); }}
           className="text-yellow-500 hover:text-yellow-700 transition-colors p-1"
           title="Set as Current"
         >
           <Star className="w-4 h-4" />
         </button>
       )}
-      <button 
-        onClick={() => { setConfirmAction({type: 'toggle', sem}); setConfirmOpen(true); }} 
+      <button
+        onClick={() => { setConfirmAction({type: 'toggle', sem}); setConfirmOpen(true); }}
         className={`${sem.isActive ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'} transition-colors p-1`}
         title={sem.isActive ? 'Deactivate' : 'Activate'}
       >
         <PowerOff className="w-4 h-4" />
+      </button>
+      <button onClick={() => { setSemToDelete(sem); setConfirmDeleteOpen(true); }} className="text-red-500 hover:text-red-700 transition-colors p-1" title="Delete">
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
   );
@@ -209,6 +225,16 @@ export function SemestersPage() {
         onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
         variant={confirmAction?.type === 'toggle' && confirmAction.sem.isActive ? 'danger' : 'primary'}
+      />
+
+      <ConfirmationDialog
+        open={confirmDeleteOpen}
+        title="Delete Semester"
+        message={`Permanently delete "${semToDelete?.name}"? This cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => { setConfirmDeleteOpen(false); setSemToDelete(null); }}
+        confirmLabel="Delete"
+        variant="danger"
       />
     </AdminLayout>
   );

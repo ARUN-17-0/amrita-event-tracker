@@ -19,6 +19,7 @@ export const useSemesters = () => {
   const updateSemester = async (id: string, d: any) => { await semesterService.update(id, d); await fetch(); };
   const toggleSemester = async (id: string) => { await semesterService.toggle(id); await fetch(); };
   const setCurrentSemester = async (id: string) => { await semesterService.setCurrent(id); await fetch(); };
+  const deleteSemester = async (id: string) => { await semesterService.delete(id); await fetch(); };
 
-  return { semesters, data: semesters, loading, error, refresh: fetch, addSemester, updateSemester, toggleSemester, setCurrentSemester };
+  return { semesters, data: semesters, loading, error, refresh: fetch, addSemester, updateSemester, toggleSemester, setCurrentSemester, deleteSemester };
 };

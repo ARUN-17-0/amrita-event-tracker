@@ -6,15 +6,17 @@ import { FormDialog } from '@/components/common/FormDialog';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useDepartments } from '@/hooks/useDepartments';
 import { Department, TableColumn } from '@/types';
-import { Plus, Edit, Power, PowerOff } from 'lucide-react';
+import { Plus, Edit, Power, PowerOff, Trash2 } from 'lucide-react';
 
 export function DepartmentsPage() {
-  const { departments, loading, error, addDepartment, updateDepartment, toggleDepartment } = useDepartments();
+  const { departments, loading, error, addDepartment, updateDepartment, toggleDepartment, deleteDepartment } = useDepartments();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [togglingDept, setTogglingDept] = useState<Department | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deptToDelete, setDeptToDelete] = useState<Department | null>(null);
 
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [formLoading, setFormLoading] = useState(false);
@@ -82,17 +84,31 @@ export function DepartmentsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deptToDelete) return;
+    try {
+      await deleteDepartment(deptToDelete.id);
+      setConfirmDeleteOpen(false);
+      setDeptToDelete(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const actions = (dept: Department) => (
-    <div className="flex space-x-2">
+    <div className="flex space-x-2 items-center">
       <button onClick={() => handleOpenEdit(dept)} className="text-gray-500 hover:text-primary transition-colors p-1" title="Edit">
         <Edit className="w-4 h-4" />
       </button>
-      <button 
-        onClick={() => { setTogglingDept(dept); setConfirmOpen(true); }} 
+      <button
+        onClick={() => { setTogglingDept(dept); setConfirmOpen(true); }}
         className={`${dept.isActive ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'} transition-colors p-1`}
         title={dept.isActive ? 'Deactivate' : 'Activate'}
       >
         {dept.isActive ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+      </button>
+      <button onClick={() => { setDeptToDelete(dept); setConfirmDeleteOpen(true); }} className="text-red-500 hover:text-red-700 transition-colors p-1" title="Delete">
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
   );
@@ -169,6 +185,16 @@ export function DepartmentsPage() {
         onCancel={() => setConfirmOpen(false)}
         confirmLabel={togglingDept?.isActive ? 'Deactivate' : 'Activate'}
         variant={togglingDept?.isActive ? 'danger' : 'primary'}
+      />
+
+      <ConfirmationDialog
+        open={confirmDeleteOpen}
+        title="Delete Department"
+        message={`Are you sure you want to permanently delete "${deptToDelete?.name}"? This cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => { setConfirmDeleteOpen(false); setDeptToDelete(null); }}
+        confirmLabel="Delete"
+        variant="danger"
       />
     </AdminLayout>
   );

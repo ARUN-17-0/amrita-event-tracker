@@ -1,7 +1,7 @@
-import { Semester } from '../types';
+﻿import { Semester } from '../types';
 import { mockSemesters } from '../mock/data';
 import { db } from '../config/firebase';
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, Timestamp, writeBatch } from 'firebase/firestore';
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 let memorySemesters = [...mockSemesters];
@@ -32,6 +32,10 @@ const mockService = {
   setCurrent: async (id: string): Promise<void> => {
     await delay(100);
     memorySemesters.forEach(s => { s.isCurrent = s.id === id; s.updatedAt = new Date(); });
+  },
+  delete: async (id: string): Promise<void> => {
+    await delay(100);
+    memorySemesters = memorySemesters.filter(s => s.id !== id);
   }
 };
 
@@ -58,15 +62,22 @@ const firebaseService = {
     if (data.endDate) updateData.endDate = Timestamp.fromDate(data.endDate);
     await updateDoc(doc(db, 'semesters', id), updateData);
   },
-  toggle: async (id: string): Promise<void> => {},
+  toggle: async (id: string): Promise<void> => {
+    if (!db) throw new Error('No FB');
+    const snap = await getDoc(doc(db, 'semesters', id));
+    if (snap.exists()) await updateDoc(doc(db, 'semesters', id), { isActive: !snap.data().isActive, updatedAt: Timestamp.now() });
+  },
   setCurrent: async (id: string): Promise<void> => {
     if (!db) throw new Error('No FB');
     const qs = await getDocs(collection(db, 'semesters'));
     const batch = writeBatch(db);
-    qs.docs.forEach(d => {
-      batch.update(d.ref, { isCurrent: d.id === id, updatedAt: Timestamp.now() });
-    });
+    qs.docs.forEach(d => { batch.update(d.ref, { isCurrent: d.id === id, updatedAt: Timestamp.now() }); });
     await batch.commit();
+  },
+  delete: async (id: string): Promise<void> => {
+    if (!db) throw new Error('No FB');
+    await deleteDoc(doc(db, 'semesters', id));
   }
 };
+
 export const semesterService = isMock ? mockService : firebaseService;

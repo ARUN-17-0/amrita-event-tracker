@@ -1,7 +1,7 @@
 import { Department } from '../types';
 import { mockDepartments } from '../mock/data';
 import { db } from '../config/firebase';
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
@@ -40,6 +40,10 @@ const mockService = {
     if (index === -1) throw new Error('Not found');
     memoryDepartments[index].isActive = !memoryDepartments[index].isActive;
     memoryDepartments[index].updatedAt = new Date();
+  },
+  delete: async (id: string): Promise<void> => {
+    await delay(100);
+    memoryDepartments = memoryDepartments.filter(d => d.id !== id);
   }
 };
 
@@ -71,6 +75,10 @@ const firebaseService = {
     if (docSnap.exists()) {
       await updateDoc(ref, { isActive: !docSnap.data().isActive, updatedAt: Timestamp.now() });
     }
+  },
+  delete: async (id: string): Promise<void> => {
+    if (!db) throw new Error('Firebase not initialized');
+    await deleteDoc(doc(db, 'departments', id));
   }
 };
 
