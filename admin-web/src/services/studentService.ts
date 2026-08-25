@@ -1,7 +1,7 @@
 import { UserProfile, BulkImportRow, BulkImportResult } from '../types';
 import { mockStudents } from '../mock/data';
 import { db, secondaryAuth } from '../config/firebase';
-import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp, query, where } from 'firebase/firestore';
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
@@ -129,7 +129,7 @@ const firebaseService = {
         res.imported++;
       } catch (e: any) {
         if (e.code === 'auth/email-already-in-use') {
-          // If already in Auth, update Firestore profile with department, section, and semester
+          // If already in Auth, update or recreate Firestore profile with department, section, and semester
           try {
             const qs = await getDocs(query(collection(db, 'profiles'), where('email', '==', row.email)));
             if (!qs.empty) {
@@ -145,10 +145,37 @@ const firebaseService = {
               await updateDoc(existingDoc.ref, updateData);
               res.imported++;
             } else {
-              res.skipped++;
+              // Profile doc was deleted or missing - recreate it
+              let studentUid = '';
+              try {
+                const cred = await signInWithEmailAndPassword(secondaryAuth, row.email, row.password || 'Amrita@123');
+                await signOut(secondaryAuth);
+                studentUid = cred.user.uid;
+              } catch {
+                // Fallback to random doc ID if password differs
+                studentUid = doc(collection(db, 'profiles')).id;
+              }
+
+              const newProfile: any = {
+                uid: studentUid,
+                fullName: row.fullName,
+                email: row.email,
+                role: 'student',
+                rollNo: row.rollNo,
+                isActive: true,
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now()
+              };
+              if (row.departmentId) newProfile.departmentId = row.departmentId;
+              if (row.sectionId) newProfile.sectionId = row.sectionId;
+              if (row.semesterId) newProfile.semesterId = row.semesterId;
+
+              await setDoc(doc(db, 'profiles', studentUid), newProfile);
+              res.imported++;
             }
           } catch (updateErr: any) {
-            res.skipped++;
+            res.failed++;
+            res.errors.push({ row: i + 1, field: 'email', message: updateErr.message || 'Failed to save student' });
           }
         } else {
           res.failed++;
