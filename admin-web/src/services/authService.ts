@@ -1,8 +1,8 @@
-﻿import { UserProfile } from '../types';
+import { UserProfile } from '../types';
 import { mockAdmin, mockDemoAccounts } from '../mock/data';
 import { auth, db } from '../config/firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -54,6 +54,25 @@ const firebaseAuthService = {
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const snap = await getDoc(doc(db, 'profiles', cred.user.uid));
     if (snap.exists()) return { ...snap.data(), uid: cred.user.uid } as UserProfile;
+
+    // Check if a profile was imported by email
+    const emailClean = (cred.user.email || email).toLowerCase().trim();
+    const qs = await getDocs(query(collection(db, 'profiles'), where('email', '==', emailClean)));
+    if (!qs.empty) {
+      const existingDoc = qs.docs[0];
+      const existingData = existingDoc.data();
+      const updatedProfile = {
+        ...existingData,
+        uid: cred.user.uid,
+        updatedAt: serverTimestamp()
+      };
+      await setDoc(doc(db, 'profiles', cred.user.uid), updatedProfile);
+      if (existingDoc.id !== cred.user.uid) {
+        try { await deleteDoc(existingDoc.ref); } catch {}
+      }
+      return { ...updatedProfile, uid: cred.user.uid } as UserProfile;
+    }
+
     // Profile doesn't exist yet — create a minimal one
     const profile: UserProfile = {
       uid: cred.user.uid,

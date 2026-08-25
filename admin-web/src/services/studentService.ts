@@ -97,7 +97,7 @@ const firebaseService = {
     await deleteDoc(doc(db, 'profiles', uid));
   },
   bulkImport: async (rows: BulkImportRow[]): Promise<BulkImportResult> => {
-    if (!db || !secondaryAuth) throw new Error('No FB');
+    if (!db) throw new Error('No FB');
     const res: BulkImportResult = { imported: 0, skipped: 0, failed: 0, errors: [] };
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -106,81 +106,50 @@ const firebaseService = {
         res.errors.push({ row: i + 1, field: 'all', message: 'Missing required fields' });
         continue;
       }
+
+      const emailLower = row.email.trim().toLowerCase();
+      let studentUid = '';
+
+      // Try creating in secondaryAuth if available
+      if (secondaryAuth) {
+        try {
+          const password = row.password || 'Amrita@123';
+          const cred = await createUserWithEmailAndPassword(secondaryAuth, emailLower, password);
+          await signOut(secondaryAuth);
+          studentUid = cred.user.uid;
+        } catch {
+          // If auth already exists or is rate-limited, proceed to save Firestore profile
+        }
+      }
+
       try {
-        const password = row.password || 'Amrita@123';
-        const cred = await createUserWithEmailAndPassword(secondaryAuth, row.email, password);
-        await signOut(secondaryAuth);
-        
+        const qs = await getDocs(query(collection(db, 'profiles'), where('email', '==', emailLower)));
         const profileData: any = {
-          uid: cred.user.uid,
-          fullName: row.fullName,
-          email: row.email,
+          fullName: row.fullName.trim(),
+          email: emailLower,
           role: 'student',
-          rollNo: row.rollNo,
+          rollNo: row.rollNo.trim(),
           isActive: true,
-          createdAt: Timestamp.now(),
           updatedAt: Timestamp.now()
         };
         if (row.departmentId) profileData.departmentId = row.departmentId;
         if (row.sectionId) profileData.sectionId = row.sectionId;
         if (row.semesterId) profileData.semesterId = row.semesterId;
 
-        await setDoc(doc(db, 'profiles', cred.user.uid), profileData);
-        res.imported++;
-      } catch (e: any) {
-        if (e.code === 'auth/email-already-in-use') {
-          // If already in Auth, update or recreate Firestore profile with department, section, and semester
-          try {
-            const qs = await getDocs(query(collection(db, 'profiles'), where('email', '==', row.email)));
-            if (!qs.empty) {
-              const existingDoc = qs.docs[0];
-              const updateData: any = {
-                fullName: row.fullName,
-                rollNo: row.rollNo,
-                updatedAt: Timestamp.now()
-              };
-              if (row.departmentId) updateData.departmentId = row.departmentId;
-              if (row.sectionId) updateData.sectionId = row.sectionId;
-              if (row.semesterId) updateData.semesterId = row.semesterId;
-              await updateDoc(existingDoc.ref, updateData);
-              res.imported++;
-            } else {
-              // Profile doc was deleted or missing - recreate it
-              let studentUid = '';
-              try {
-                const cred = await signInWithEmailAndPassword(secondaryAuth, row.email, row.password || 'Amrita@123');
-                await signOut(secondaryAuth);
-                studentUid = cred.user.uid;
-              } catch {
-                // Fallback to random doc ID if password differs
-                studentUid = doc(collection(db, 'profiles')).id;
-              }
-
-              const newProfile: any = {
-                uid: studentUid,
-                fullName: row.fullName,
-                email: row.email,
-                role: 'student',
-                rollNo: row.rollNo,
-                isActive: true,
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now()
-              };
-              if (row.departmentId) newProfile.departmentId = row.departmentId;
-              if (row.sectionId) newProfile.sectionId = row.sectionId;
-              if (row.semesterId) newProfile.semesterId = row.semesterId;
-
-              await setDoc(doc(db, 'profiles', studentUid), newProfile);
-              res.imported++;
-            }
-          } catch (updateErr: any) {
-            res.failed++;
-            res.errors.push({ row: i + 1, field: 'email', message: updateErr.message || 'Failed to save student' });
-          }
+        if (!qs.empty) {
+          const existingDoc = qs.docs[0];
+          await updateDoc(existingDoc.ref, profileData);
         } else {
-          res.failed++;
-          res.errors.push({ row: i + 1, field: 'email', message: e.message || 'Import failed' });
+          const docId = studentUid || doc(collection(db, 'profiles')).id;
+          profileData.uid = docId;
+          profileData.createdAt = Timestamp.now();
+          await setDoc(doc(db, 'profiles', docId), profileData);
         }
+
+        res.imported++;
+      } catch (err: any) {
+        res.failed++;
+        res.errors.push({ row: i + 1, field: 'email', message: err.message || 'Failed to save student' });
       }
     }
     return res;
