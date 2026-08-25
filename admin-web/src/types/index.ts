@@ -179,6 +179,10 @@ export interface BulkImportRow {
   departmentCode: string;
   semesterName: string;
   sectionName: string;
+  departmentId?: string;
+  semesterId?: string;
+  sectionId?: string;
+  password?: string;
 }
 
 export interface ValidatedImportRow extends BulkImportRow {
@@ -186,9 +190,6 @@ export interface ValidatedImportRow extends BulkImportRow {
   isValid: boolean;
   isDuplicate: boolean;
   errors: string[];
-  departmentId?: string;
-  semesterId?: string;
-  sectionId?: string;
 }
 
 // --- UI Types ---

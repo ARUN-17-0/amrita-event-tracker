@@ -19,10 +19,12 @@ export function BulkImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ValidatedImportRow[]>([]);
   const [importing, setImporting] = useState(false);
+  const [classPassword, setClassPassword] = useState('Amrita@123');
   const [result, setResult] = useState<BulkImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const handleDownloadTemplate = () => {
-    const csvContent = "data:text/csv;charset=utf-8,Full Name,College Email,Roll Number,Department Code,Semester,Section\nJohn Doe,john.doe@blr.students.amrita.edu,BLR.EN.U4CSE20001,CSE,2024-2025,A";
+    const csvContent = "data:text/csv;charset=utf-8,Full Name,College Email,Roll Number,Department Code,Semester,Section\nJohn Doe,john.doe@blr.students.amrita.edu,BLR.EN.U4CSE20001,CSE,2024,A";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -40,14 +42,36 @@ export function BulkImportPage() {
     if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) errors.push('Valid email is required');
     if (!rollNo.trim()) errors.push('Roll No is required');
 
-    const dept = departments.find(d => d.code.toLowerCase() === departmentCode.trim().toLowerCase());
-    if (!dept) errors.push(`Invalid Dept Code: ${departmentCode}`);
+    const cleanDept = departmentCode.trim().toLowerCase();
+    const dept = departments.find(d => 
+      d.code.toLowerCase() === cleanDept || 
+      d.name.toLowerCase() === cleanDept ||
+      d.id === departmentCode.trim()
+    );
+    if (!dept) errors.push(`Invalid Dept: ${departmentCode || 'Empty'}`);
 
-    const sem = semesters.find(s => s.name.toLowerCase() === semesterName.trim().toLowerCase() || s.year.toLowerCase() === semesterName.trim().toLowerCase());
-    if (!sem) errors.push(`Invalid Semester: ${semesterName}`);
+    const cleanSem = semesterName.trim().toLowerCase();
+    const sem = semesters.find(s => 
+      s.name.toLowerCase() === cleanSem || 
+      s.year.toLowerCase() === cleanSem ||
+      s.name.toLowerCase().includes(cleanSem) ||
+      cleanSem.includes(s.year.toLowerCase()) ||
+      s.id === semesterName.trim()
+    );
+    if (!sem) errors.push(`Invalid Batch/Sem: ${semesterName || 'Empty'}`);
 
-    const sec = sections.find(s => s.name.toLowerCase() === sectionName.trim().toLowerCase());
-    if (!sec) errors.push(`Invalid Section: ${sectionName}`);
+    const cleanSec = sectionName.trim().toLowerCase();
+    const sec = sections.find(s => {
+      const sName = s.name.toLowerCase();
+      const matchesName = sName === cleanSec || 
+        (dept && sName === `${dept.code.toLowerCase()}-${cleanSec}`) ||
+        (dept && cleanSec === `${dept.code.toLowerCase()}-${sName}`) ||
+        s.id === sectionName.trim();
+      const matchesDept = !dept || s.departmentId === dept.id;
+      return matchesName && matchesDept;
+    }) || sections.find(s => s.name.toLowerCase() === cleanSec);
+
+    if (!sec) errors.push(`Invalid Section: ${sectionName || 'Empty'}`);
 
     return {
       rowIndex: index + 1,
@@ -57,12 +81,12 @@ export function BulkImportPage() {
       departmentCode: departmentCode.trim(),
       semesterName: semesterName.trim(),
       sectionName: sectionName.trim(),
-      isValid: errors.length === 0,
-      isDuplicate: false, // simplified for mock
-      errors,
       departmentId: dept?.id,
       semesterId: sem?.id,
-      sectionId: sec?.id
+      sectionId: sec?.id,
+      isValid: errors.length === 0,
+      isDuplicate: false,
+      errors
     };
   };
 
@@ -76,7 +100,6 @@ export function BulkImportPage() {
         const lines = text.split('\n').filter(l => l.trim().length > 0);
         if (lines.length > 1) {
           const dataRows = lines.slice(1).map(l => {
-            // Very simple CSV parser for mock
             return l.split(',').map(v => v.replace(/^"|"$/g, '').trim());
           });
           const validated = dataRows.map((r, i) => validateRow(r, i));
@@ -94,7 +117,6 @@ export function BulkImportPage() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
       setFile(droppedFile);
-      // Re-using the logic from handleFileUpload
       const reader = new FileReader();
       reader.onload = (event) => {
         const text = event.target?.result as string;
@@ -112,21 +134,35 @@ export function BulkImportPage() {
 
   const handleImport = async () => {
     setImporting(true);
-    const validRows = parsedRows.filter(r => r.isValid).map(r => ({
+    setImportError(null);
+
+    const validRows: BulkImportRow[] = parsedRows.filter(r => r.isValid).map(r => ({
       fullName: r.fullName,
       email: r.email,
       rollNo: r.rollNo,
       departmentCode: r.departmentCode,
       semesterName: r.semesterName,
-      sectionName: r.sectionName
+      sectionName: r.sectionName,
+      departmentId: r.departmentId,
+      semesterId: r.semesterId,
+      sectionId: r.sectionId,
+      password: classPassword || 'Amrita@123'
     }));
 
     try {
       const res = await bulkImportStudents(validRows);
       setResult(res);
       setStep(3);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setImportError(err.message || 'Import failed. Please try again.');
+      setResult({
+        imported: 0,
+        skipped: 0,
+        failed: validRows.length,
+        errors: [{ row: 0, field: 'general', message: err.message || 'Import failed' }]
+      });
+      setStep(3);
     } finally {
       setImporting(false);
     }
@@ -189,24 +225,42 @@ export function BulkImportPage() {
 
         {step === 2 && (
           <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-lg font-medium text-gray-900">Preview Data</h2>
                 <p className="text-sm text-gray-500 mt-1">
                   Found {parsedRows.length} rows. {parsedRows.filter(r => r.isValid).length} valid, {parsedRows.filter(r => !r.isValid).length} invalid.
                 </p>
               </div>
-              <div className="space-x-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-gray-700 whitespace-nowrap">Class Password:</label>
+                  <input
+                    type="text"
+                    value={classPassword}
+                    onChange={e => setClassPassword(e.target.value)}
+                    placeholder="e.g. Amrita@123"
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-mono w-36 focus:ring-primary focus:border-primary"
+                  />
+                </div>
                 <button onClick={() => setStep(1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                 <button 
                   onClick={handleImport} 
                   disabled={importing || parsedRows.filter(r => r.isValid).length === 0}
-                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-light disabled:opacity-50"
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-light disabled:opacity-50 flex items-center gap-2"
                 >
+                  {importing && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                   {importing ? 'Importing...' : 'Start Import'}
                 </button>
               </div>
             </div>
+
+            {importError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{importError}</span>
+              </div>
+            )}
             
             <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px] overflow-y-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -218,7 +272,7 @@ export function BulkImportPage() {
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Email</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Roll No</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Dept Code</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Sem & Section</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500">Sem / Batch & Section</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Errors</th>
                   </tr>
                 </thead>
@@ -251,12 +305,12 @@ export function BulkImportPage() {
               <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Import Complete</h2>
-            <p className="text-gray-500 mb-6">Successfully imported {result.imported} students.</p>
+            <p className="text-gray-500 mb-6">Successfully processed {result.imported + result.skipped + result.failed} records.</p>
             
             <div className="bg-gray-50 rounded-lg p-4 mb-8 text-left border border-gray-100 flex gap-4 divide-x divide-gray-200">
               <div className="flex-1 px-4 text-center">
                 <div className="text-2xl font-bold text-green-600">{result.imported}</div>
-                <div className="text-sm text-gray-500">Imported</div>
+                <div className="text-sm text-gray-500">Imported / Assigned</div>
               </div>
               <div className="flex-1 px-4 text-center">
                 <div className="text-2xl font-bold text-yellow-600">{result.skipped}</div>
