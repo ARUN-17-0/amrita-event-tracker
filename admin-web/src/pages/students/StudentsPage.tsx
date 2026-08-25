@@ -8,8 +8,9 @@ import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useStudents } from '@/hooks/useStudents';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useSections } from '@/hooks/useSections';
+import { useSemesters } from '@/hooks/useSemesters';
 import { UserProfile, TableColumn } from '@/types';
-import { Plus, Edit, Upload, Trash2 } from 'lucide-react';
+import { Plus, Edit, Upload, Trash2, Users, GraduationCap, Building2 } from 'lucide-react';
 import { registerMockCredential } from '@/services/authService';
 
 export function StudentsPage() {
@@ -17,19 +18,33 @@ export function StudentsPage() {
   const { students, loading, addStudent, updateStudent, deleteStudent } = useStudents();
   const { departments } = useDepartments();
   const { sections } = useSections();
+  const { semesters } = useSemesters();
   
   const [search, setSearch] = useState('');
-  const [filterDept, setFilterDept] = useState('');
+  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
+  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+  const [selectedSectionId, setSelectedSectionId] = useState<string>('');
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<UserProfile | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<UserProfile | null>(null);
 
-  const [formData, setFormData] = useState({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '', role: 'student', password: '', confirmPassword: '', changePassword: '' });
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    rollNo: '',
+    departmentId: '',
+    sectionId: '',
+    role: 'student',
+    password: '',
+    confirmPassword: '',
+    changePassword: ''
+  });
   const [formLoading, setFormLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
-  const getDeptName = (id?: string) => {
+  const getDeptCode = (id?: string) => {
     if (!id) return '-';
     return departments.find(d => d.id === id)?.code || id;
   };
@@ -39,12 +54,33 @@ export function StudentsPage() {
     return sections.find(s => s.id === id)?.name || id;
   };
 
-  const filtered = students.filter(s => 
-    (s.fullName.toLowerCase().includes(search.toLowerCase()) || 
-    s.email.toLowerCase().includes(search.toLowerCase()) ||
-    (s.rollNo && s.rollNo.toLowerCase().includes(search.toLowerCase()))) &&
-    (!filterDept || s.departmentId === filterDept)
+  const getBatchName = (id?: string) => {
+    if (!id) return '-';
+    return semesters.find(s => s.id === id)?.name || id;
+  };
+
+  // Sections matching current Batch & Department filters
+  const availableSections = sections.filter(sec => 
+    (!selectedDeptId || sec.departmentId === selectedDeptId) &&
+    (!selectedBatchId || sec.semesterId === selectedBatchId)
   );
+
+  // Student counts helper
+  const getSectionStudentCount = (sectionId: string) => {
+    return students.filter(s => s.sectionId === sectionId).length;
+  };
+
+  const filtered = students.filter(s => {
+    const matchesSearch = (
+      s.fullName.toLowerCase().includes(search.toLowerCase()) || 
+      s.email.toLowerCase().includes(search.toLowerCase()) ||
+      (s.rollNo && s.rollNo.toLowerCase().includes(search.toLowerCase()))
+    );
+    const matchesBatch = !selectedBatchId || s.semesterId === selectedBatchId;
+    const matchesDept = !selectedDeptId || s.departmentId === selectedDeptId;
+    const matchesSection = !selectedSectionId || s.sectionId === selectedSectionId;
+    return matchesSearch && matchesBatch && matchesDept && matchesSection;
+  });
 
   const columns: TableColumn<UserProfile>[] = [
     { key: 'fullName', label: 'Name', sortable: true },
@@ -53,12 +89,21 @@ export function StudentsPage() {
     { 
       key: 'department', 
       label: 'Department',
-      render: (s) => getDeptName(s.departmentId)
+      render: (s) => getDeptCode(s.departmentId)
     },
     { 
       key: 'section', 
-      label: 'Section',
-      render: (s) => getSecName(s.sectionId)
+      label: 'Class / Section',
+      render: (s) => (
+        <span className="font-semibold text-primary">
+          {getSecName(s.sectionId)}
+        </span>
+      )
+    },
+    { 
+      key: 'batch', 
+      label: 'Batch',
+      render: (s) => getBatchName(s.semesterId)
     },
     { 
       key: 'role',
@@ -82,7 +127,17 @@ export function StudentsPage() {
 
   const handleOpenAdd = () => {
     setEditingStudent(null);
-    setFormData({ fullName: '', email: '', rollNo: '', departmentId: '', sectionId: '', role: 'student', password: '', confirmPassword: '', changePassword: '' });
+    setFormData({
+      fullName: '',
+      email: '',
+      rollNo: '',
+      departmentId: selectedDeptId || (departments[0]?.id || ''),
+      sectionId: selectedSectionId || (availableSections[0]?.id || ''),
+      role: 'student',
+      password: '',
+      confirmPassword: '',
+      changePassword: ''
+    });
     setPasswordError('');
     setDialogOpen(true);
   };
@@ -116,15 +171,21 @@ export function StudentsPage() {
 
     setFormLoading(true);
     try {
+      // Find matching semesterId from section if not present
+      const sec = sections.find(s => s.id === formData.sectionId);
+      const studentPayload = {
+        ...formData,
+        semesterId: sec?.semesterId || selectedBatchId || ''
+      };
+
       if (editingStudent) {
-        // Strip password fields — only pass profile fields
-        const { password, confirmPassword, changePassword, ...profileFields } = formData;
+        const { password, confirmPassword, changePassword, ...profileFields } = studentPayload;
         await updateStudent(editingStudent.uid, profileFields);
         if (changePassword) {
           registerMockCredential(editingStudent, changePassword);
         }
       } else {
-        await addStudent(formData);
+        await addStudent(studentPayload);
       }
       setDialogOpen(false);
     } catch (err) {
@@ -171,7 +232,10 @@ export function StudentsPage() {
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Students & Classes</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Filter by Batch ➔ Department ➔ Class to view students</p>
+        </div>
         <div className="flex gap-2">
           <button
             onClick={() => navigate('/students/import')}
@@ -190,23 +254,122 @@ export function StudentsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex gap-2 flex-col sm:flex-row">
-          <div className="flex-1">
-            <SearchBar value={search} onChange={setSearch} placeholder="Search students by name, email, or roll number..." />
+      {/* Main Filter Hierarchy Container */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden space-y-3 p-4 mb-4">
+        {/* Step 1: Batch */}
+        <div>
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+            <GraduationCap className="w-3.5 h-3.5" /> 1. Batch
           </div>
-          <select 
-            value={filterDept} 
-            onChange={e => setFilterDept(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary w-full sm:w-48"
-          >
-            <option value="">All Depts</option>
-            {departments.map(d => <option key={d.id} value={d.id}>{d.code}</option>)}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => { setSelectedBatchId(''); setSelectedSectionId(''); }}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedBatchId === ''
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All Batches
+            </button>
+            {semesters.map(b => (
+              <button
+                key={b.id}
+                onClick={() => { setSelectedBatchId(b.id); setSelectedSectionId(''); }}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  selectedBatchId === b.id
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
         </div>
-        <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No students found." />
+
+        {/* Step 2: Department */}
+        <div className="pt-2 border-t border-gray-100">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+            <Building2 className="w-3.5 h-3.5" /> 2. Department
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => { setSelectedDeptId(''); setSelectedSectionId(''); }}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedDeptId === ''
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All Branches
+            </button>
+            {departments.map(d => (
+              <button
+                key={d.id}
+                onClick={() => { setSelectedDeptId(d.id); setSelectedSectionId(''); }}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  selectedDeptId === d.id
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {d.code} — {d.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Step 3: Class / Section */}
+        <div className="pt-2 border-t border-gray-100">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+            <Users className="w-3.5 h-3.5" /> 3. Class / Section
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedSectionId('')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedSectionId === ''
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All Classes ({filtered.length} students)
+            </button>
+            {availableSections.map(sec => {
+              const count = getSectionStudentCount(sec.id);
+              return (
+                <button
+                  key={sec.id}
+                  onClick={() => setSelectedSectionId(sec.id)}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    selectedSectionId === sec.id
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <span>{sec.name}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedSectionId === sec.id ? 'bg-blue-800 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="pt-2 border-t border-gray-100">
+          <SearchBar value={search} onChange={setSearch} placeholder="Search students by name, email, or roll number..." />
+        </div>
       </div>
 
+      {/* Step 4: Students Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <DataTable columns={columns} data={filtered} loading={loading} actions={actions} emptyMessage="No students found in this class." />
+      </div>
+
+      {/* Add / Edit Form */}
       <FormDialog open={dialogOpen} title={editingStudent ? 'Student Details / Edit' : 'Add Student'} onClose={() => setDialogOpen(false)} onSubmit={handleSubmit} loading={formLoading}>
         <div className="space-y-4">
           {passwordError && (
@@ -257,14 +420,16 @@ export function StudentsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
               <select required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.departmentId} onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}>
                 <option value="">Select Department</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name} ({d.code})</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Class / Section</label>
               <select required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.sectionId} onChange={(e) => setFormData({ ...formData, sectionId: e.target.value })}>
-                <option value="">Select Section</option>
-                {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                <option value="">Select Class</option>
+                {sections.filter(s => !formData.departmentId || s.departmentId === formData.departmentId).map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
               </select>
             </div>
           </div>
