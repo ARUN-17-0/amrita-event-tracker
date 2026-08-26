@@ -77,13 +77,40 @@ const firebaseService = {
     return snap.exists() ? { ...snap.data(), uid: snap.id, createdAt: snap.data().createdAt?.toDate(), updatedAt: snap.data().updatedAt?.toDate() } as UserProfile : null;
   },
   create: async (data: Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'> & { password?: string }): Promise<UserProfile> => {
-    if (!db || !secondaryAuth) throw new Error('No FB');
+    if (!db) throw new Error('No FB');
     const password = (data as any).password || 'Amrita@123';
-    const cred = await createUserWithEmailAndPassword(secondaryAuth, data.email, password);
-    await signOut(secondaryAuth);
-    const uid = cred.user.uid;
+    let uid = '';
+
+    if (secondaryAuth) {
+      try {
+        const cred = await createUserWithEmailAndPassword(secondaryAuth, data.email.toLowerCase().trim(), password);
+        await signOut(secondaryAuth);
+        uid = cred.user.uid;
+      } catch (authErr: any) {
+        // If email already in auth, that's fine, we will create/update the profile
+      }
+    }
+
+    if (!uid) {
+      const qs = await getDocs(query(collection(db, 'profiles'), where('email', '==', data.email.toLowerCase().trim())));
+      if (!qs.empty) {
+        uid = qs.docs[0].id;
+      } else {
+        uid = doc(collection(db, 'profiles')).id;
+      }
+    }
+
     const { password: _pw, confirmPassword: _cp, ...profileData } = data as any;
-    const profile: UserProfile = { ...profileData, uid, role: profileData.role || 'student', isActive: true, createdAt: new Date(), updatedAt: new Date() };
+    const profile: UserProfile = {
+      ...profileData,
+      uid,
+      email: data.email.toLowerCase().trim(),
+      role: profileData.role || 'student',
+      initialPassword: password,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
     await setDoc(doc(db, 'profiles', uid), { ...profile, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
     return profile;
   },

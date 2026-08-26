@@ -188,8 +188,9 @@ export function StudentsPage() {
         await addStudent(studentPayload);
       }
       setDialogOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setPasswordError(err.message || 'Failed to save student. Please check the details and try again.');
     } finally {
       setFormLoading(false);
     }
