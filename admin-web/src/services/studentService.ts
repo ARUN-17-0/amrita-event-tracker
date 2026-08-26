@@ -108,19 +108,6 @@ const firebaseService = {
       }
 
       const emailLower = row.email.trim().toLowerCase();
-      let studentUid = '';
-
-      // Try creating in secondaryAuth if available
-      if (secondaryAuth) {
-        try {
-          const password = row.password || 'Amrita@123';
-          const cred = await createUserWithEmailAndPassword(secondaryAuth, emailLower, password);
-          await signOut(secondaryAuth);
-          studentUid = cred.user.uid;
-        } catch {
-          // If auth already exists or is rate-limited, proceed to save Firestore profile
-        }
-      }
 
       try {
         const qs = await getDocs(query(collection(db, 'profiles'), where('email', '==', emailLower)));
@@ -130,6 +117,7 @@ const firebaseService = {
           role: 'student',
           rollNo: row.rollNo.trim(),
           isActive: true,
+          initialPassword: row.password || 'Amrita@123',
           updatedAt: Timestamp.now()
         };
         if (row.departmentId) profileData.departmentId = row.departmentId;
@@ -140,7 +128,7 @@ const firebaseService = {
           const existingDoc = qs.docs[0];
           await updateDoc(existingDoc.ref, profileData);
         } else {
-          const docId = studentUid || doc(collection(db, 'profiles')).id;
+          const docId = doc(collection(db, 'profiles')).id;
           profileData.uid = docId;
           profileData.createdAt = Timestamp.now();
           await setDoc(doc(db, 'profiles', docId), profileData);
