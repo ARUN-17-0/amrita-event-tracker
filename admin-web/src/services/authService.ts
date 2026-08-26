@@ -134,8 +134,19 @@ const firebaseAuthService = {
         unsub();
         if (!fbUser) { resolve(null); return; }
         const snap = await getDoc(doc(db!, 'profiles', fbUser.uid));
-        if (snap.exists()) resolve({ ...snap.data(), uid: fbUser.uid } as UserProfile);
-        else resolve(null);
+        if (snap.exists()) {
+          resolve({ ...snap.data(), uid: fbUser.uid } as UserProfile);
+        } else {
+          const email = fbUser.email?.toLowerCase().trim();
+          if (email) {
+            const qs = await getDocs(query(collection(db!, 'profiles'), where('email', '==', email)));
+            if (!qs.empty) {
+              resolve({ ...qs.docs[0].data(), uid: fbUser.uid } as UserProfile);
+              return;
+            }
+          }
+          resolve(null);
+        }
       });
     });
   },
@@ -144,8 +155,19 @@ const firebaseAuthService = {
     return onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) { callback(null); return; }
       const snap = await getDoc(doc(db!, 'profiles', fbUser.uid));
-      if (snap.exists()) callback({ ...snap.data(), uid: fbUser.uid } as UserProfile);
-      else callback(null);
+      if (snap.exists()) {
+        callback({ ...snap.data(), uid: fbUser.uid } as UserProfile);
+      } else {
+        const email = fbUser.email?.toLowerCase().trim();
+        if (email) {
+          const qs = await getDocs(query(collection(db!, 'profiles'), where('email', '==', email)));
+          if (!qs.empty) {
+            callback({ ...qs.docs[0].data(), uid: fbUser.uid } as UserProfile);
+            return;
+          }
+        }
+        callback(null);
+      }
     });
   },
   getUserProfile: async (uid: string): Promise<UserProfile | null> => {
