@@ -1,4 +1,4 @@
-import { X, Clock, MapPin, BookOpen, User, CalendarDays } from 'lucide-react';
+import { X, Clock, MapPin, BookOpen, User, CalendarDays, CalendarPlus } from 'lucide-react';
 import { AcademicEvent } from '@/types';
 
 interface EventDetailModalProps {
@@ -24,10 +24,34 @@ const LEFT_COLORS: Record<string, string> = {
   lab: 'bg-orange-500', project: 'bg-teal-500', announcement: 'bg-green-500', other: 'bg-gray-500',
 };
 
+function buildGoogleCalendarUrl(event: AcademicEvent, subjectName?: string, sectionName?: string) {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const d = event.eventDate;
+  const [h, m] = (event.eventTime || '09:00').split(':').map(Number);
+  const startDt = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
+  const endDt = new Date(startDt.getTime() + 60 * 60 * 1000); // default 1 hour
+  const fmt = (dt: Date) =>
+    `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+  const details = [
+    subjectName ? `Subject: ${subjectName}` : '',
+    sectionName ? `Section: ${sectionName}` : '',
+    event.description || '',
+  ].filter(Boolean).join('\n');
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.title,
+    dates: `${fmt(startDt)}/${fmt(endDt)}`,
+    details,
+    location: sectionName || '',
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
 export function EventDetailModal({ event, onClose, subjectName, sectionName, creatorName }: EventDetailModalProps) {
   if (!event) return null;
   const style = TYPE_STYLES[event.type] ?? TYPE_STYLES.other;
   const leftColor = LEFT_COLORS[event.type] ?? 'bg-gray-500';
+  const gcalUrl = buildGoogleCalendarUrl(event, subjectName, sectionName);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -87,7 +111,16 @@ export function EventDetailModal({ event, onClose, subjectName, sectionName, cre
             </div>
           )}
 
-          <div className="mt-5 flex justify-end">
+          <div className="mt-5 flex items-center justify-between gap-3">
+            <a
+              href={gcalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              <CalendarPlus className="w-4 h-4 text-blue-500" />
+              Add to Calendar
+            </a>
             <button
               onClick={onClose}
               className="px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-light transition-colors"

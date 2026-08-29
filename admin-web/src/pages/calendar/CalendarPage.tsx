@@ -10,6 +10,7 @@ import { useDepartments } from '@/hooks/useDepartments';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useSections } from '@/hooks/useSections';
 import { useAuth } from '@/hooks/useAuth';
+import { useFaculty } from '@/hooks/useFaculty';
 import { AcademicEvent, EventType } from '@/types';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -19,6 +20,7 @@ export function CalendarPage() {
   const { departments } = useDepartments();
   const { subjects } = useSubjects();
   const { sections } = useSections();
+  const { faculty } = useFaculty();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [filterDept, setFilterDept] = useState('');
@@ -191,6 +193,7 @@ export function CalendarPage() {
         onClose={() => setSelectedEvent(null)}
         subjectName={subjects.find(s => s.id === selectedEvent?.subjectId)?.name}
         sectionName={sections.find(s => s.id === selectedEvent?.sectionId)?.name}
+        creatorName={faculty.find(f => f.uid === selectedEvent?.createdBy)?.fullName}
       />
     </AdminLayout>
   );
