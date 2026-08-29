@@ -138,7 +138,7 @@ export function CalendarPage() {
                       <EventCard event={event} onClick={() => setSelectedEvent(event)} />
                       {canDelete && (
                         <button
-                          onClick={() => setEventToDelete(event)}
+                          onClick={(e) => { e.stopPropagation(); setEventToDelete(event); }}
                           className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 p-1 bg-white rounded-full shadow transition-all"
                           title="Delete event"
                         >

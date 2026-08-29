@@ -4,12 +4,15 @@ import { DataTable } from '@/components/data/DataTable';
 import { SearchBar } from '@/components/data/SearchBar';
 import { FormDialog } from '@/components/common/FormDialog';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
+import { EventDetailModal } from '@/components/calendar/EventDetailModal';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useSemesters } from '@/hooks/useSemesters';
+import { useCalendar } from '@/hooks/useCalendar';
+import { useSections } from '@/hooks/useSections';
 import { useAuth } from '@/hooks/useAuth';
-import { Subject, TableColumn } from '@/types';
-import { Plus, Edit, Trash2, LayoutGrid, List, BookOpen, GraduationCap, Award } from 'lucide-react';
+import { Subject, TableColumn, AcademicEvent } from '@/types';
+import { Plus, Edit, Trash2, LayoutGrid, List, Award, CalendarDays, X } from 'lucide-react';
 
 export function SubjectsPage() {
   const { user } = useAuth();
@@ -17,11 +20,17 @@ export function SubjectsPage() {
   const { subjects, loading, addSubject, updateSubject, deleteSubject } = useSubjects();
   const { departments } = useDepartments();
   const { semesters } = useSemesters();
-  
+  const { events } = useCalendar();
+  const { sections } = useSections();
+
   const [search, setSearch] = useState('');
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [selectedSemNumber, setSelectedSemNumber] = useState<number>(0); // 0 = All
   const [viewMode, setViewMode] = useState<'box' | 'list'>('box');
+
+  // Subject events panel
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<AcademicEvent | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSub, setEditingSub] = useState<Subject | null>(null);
@@ -297,9 +306,10 @@ export function SubjectsPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map(sub => (
-                <div 
-                  key={sub.id} 
-                  className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+                <div
+                  key={sub.id}
+                  className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between cursor-pointer"
+                  onClick={() => setSelectedSubject(sub)}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -331,14 +341,14 @@ export function SubjectsPage() {
 
                   {isAdmin && (
                     <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-end gap-2">
-                      <button 
-                        onClick={() => handleOpenEdit(sub)}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(sub); }}
                         className="px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg flex items-center gap-1 transition-colors"
                       >
                         <Edit className="w-3.5 h-3.5" /> Edit
                       </button>
-                      <button 
-                        onClick={() => { setSubToDelete(sub); setConfirmDeleteSubOpen(true); }}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSubToDelete(sub); setConfirmDeleteSubOpen(true); }}
                         className="px-2.5 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg flex items-center gap-1 transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -420,6 +430,85 @@ export function SubjectsPage() {
         onCancel={() => { setConfirmDeleteSubOpen(false); setSubToDelete(null); }}
         confirmLabel="Delete Subject"
         variant="danger"
+      />
+
+      {/* Subject Events Panel */}
+      {selectedSubject && !selectedEvent && (() => {
+        const subEvents = events
+          .filter(e => e.subjectId === selectedSubject.id)
+          .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime());
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedSubject(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="h-1.5 w-full bg-primary" />
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{selectedSubject.name}</h2>
+                    <p className="text-sm text-gray-500 mt-0.5">{selectedSubject.code}</p>
+                  </div>
+                  <button onClick={() => setSelectedSubject(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Upcoming Events</p>
+
+                {subEvents.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-gray-400">No events scheduled for this subject.</div>
+                ) : (
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {subEvents.map(ev => {
+                      const TYPE_COLORS: Record<string, string> = {
+                        assignment: 'bg-blue-500', quiz: 'bg-purple-500', exam: 'bg-red-500',
+                        lab: 'bg-orange-500', project: 'bg-teal-500', announcement: 'bg-green-500', other: 'bg-gray-400'
+                      };
+                      const TYPE_LABELS: Record<string, string> = {
+                        assignment: 'Assignment', quiz: 'Quiz', exam: 'Exam',
+                        lab: 'Lab', project: 'Project', announcement: 'Announcement', other: 'Other'
+                      };
+                      return (
+                        <div
+                          key={ev.id}
+                          className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => setSelectedEvent(ev)}
+                        >
+                          <div className={`w-1.5 self-stretch rounded-full shrink-0 ${TYPE_COLORS[ev.type] ?? 'bg-gray-400'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{ev.title}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                              <CalendarDays className="w-3 h-3" />
+                              <span>{ev.eventDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                              <span>·</span>
+                              <span>{ev.eventTime}</span>
+                            </div>
+                          </div>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 shrink-0`}>
+                            {TYPE_LABELS[ev.type] ?? 'Other'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="mt-5 flex justify-end">
+                  <button onClick={() => setSelectedSubject(null)} className="px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-light transition-colors">
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Event detail when clicking an event from the subject panel */}
+      <EventDetailModal
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        subjectName={selectedSubject?.name}
+        sectionName={sections.find(s => s.id === selectedEvent?.sectionId)?.name}
       />
     </AdminLayout>
   );
