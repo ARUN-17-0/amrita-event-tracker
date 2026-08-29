@@ -34,15 +34,11 @@ export function CalendarPage() {
   const isMentor = user?.role === 'course_mentor';
   const canCreate = isAdmin || user?.role === 'faculty' || isMentor;
 
-  // Per-event permission: creator, subject faculty, admin, mentor can modify
+  // Only admin or the faculty who created the event can modify it
   const canModifyEvent = (event: AcademicEvent) => {
     if (!user) return false;
-    if (isAdmin || isMentor) return true;
-    if (event.createdBy === user.uid) return true;
-    // Faculty who teaches this subject
-    const sub = subjects.find(s => s.id === event.subjectId);
-    if (sub && sub.facultyId === user.uid) return true;
-    return false;
+    if (isAdmin) return true;
+    return event.createdBy === user.uid;
   };
 
   const handleDateSelect = (date: Date) => setSelectedDate(date);
