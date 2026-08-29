@@ -1,7 +1,7 @@
 import { AcademicEvent } from '../types';
 import { mockEvents } from '../mock/data';
 import { db } from '../config/firebase';
-import { collection, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -25,14 +25,13 @@ const mockService = {
   createEvent: async (event: Omit<AcademicEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AcademicEvent> => {
     await delay(200);
     const now = new Date();
-    const newEvent: AcademicEvent = {
-      ...event,
-      id: `evt-${Date.now()}`,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const newEvent: AcademicEvent = { ...event, id: `evt-${Date.now()}`, createdAt: now, updatedAt: now };
     runtimeEvents = [...runtimeEvents, newEvent];
     return newEvent;
+  },
+  updateEvent: async (id: string, data: Partial<Omit<AcademicEvent, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
+    await delay(100);
+    runtimeEvents = runtimeEvents.map(e => e.id === id ? { ...e, ...data, updatedAt: new Date() } : e);
   },
   deleteEvent: async (id: string): Promise<void> => {
     await delay(100);
@@ -58,6 +57,12 @@ const firebaseService = {
     if (!db) throw new Error('No FB');
     const ref = await addDoc(collection(db, 'events'), { ...event, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
     return { ...event, id: ref.id, createdAt: new Date(), updatedAt: new Date() };
+  },
+  updateEvent: async (id: string, data: Partial<Omit<AcademicEvent, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
+    if (!db) throw new Error('No FB');
+    const payload: any = { ...data, updatedAt: serverTimestamp() };
+    if (data.eventDate) payload.eventDate = Timestamp.fromDate(data.eventDate);
+    await updateDoc(doc(db, 'events', id), payload);
   },
   deleteEvent: async (id: string): Promise<void> => {
     if (!db) throw new Error('No FB');

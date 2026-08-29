@@ -10,6 +10,7 @@ interface AddEventDialogProps {
   subjects: Subject[];
   sections: Section[];
   defaultDate?: Date;
+  editingEvent?: AcademicEvent | null;
 }
 
 const EVENT_TYPES: { value: EventType; label: string }[] = [
@@ -24,7 +25,7 @@ const EVENT_TYPES: { value: EventType; label: string }[] = [
 
 const toDateInput = (d: Date) => d.toISOString().slice(0, 10);
 
-export function AddEventDialog({ open, onClose, onSubmit, currentUser, subjects, sections, defaultDate }: AddEventDialogProps) {
+export function AddEventDialog({ open, onClose, onSubmit, currentUser, subjects, sections, defaultDate, editingEvent }: AddEventDialogProps) {
   const isAdmin = currentUser.role === "admin";
   const isMentor = currentUser.role === "course_mentor";
 
@@ -42,10 +43,22 @@ export function AddEventDialog({ open, onClose, onSubmit, currentUser, subjects,
 
   useEffect(() => {
     if (open) {
-      setForm({ title: "", type: "quiz", description: "", subjectId: "", sectionId: "", eventDate: toDateInput(defaultDate ?? new Date()), eventTime: "09:00" });
+      if (editingEvent) {
+        setForm({
+          title: editingEvent.title,
+          type: editingEvent.type,
+          description: editingEvent.description || "",
+          subjectId: editingEvent.subjectId,
+          sectionId: editingEvent.sectionId,
+          eventDate: toDateInput(editingEvent.eventDate),
+          eventTime: editingEvent.eventTime,
+        });
+      } else {
+        setForm({ title: "", type: "quiz", description: "", subjectId: "", sectionId: "", eventDate: toDateInput(defaultDate ?? new Date()), eventTime: "09:00" });
+      }
       setRuleError("");
     }
-  }, [open, defaultDate]);
+  }, [open, defaultDate, editingEvent]);
 
   const availableSections = isAdmin ? sections : sections.filter(s => s.departmentId === currentUser.departmentId);
   const selectedSection = sections.find(s => s.id === form.sectionId);
@@ -115,7 +128,7 @@ export function AddEventDialog({ open, onClose, onSubmit, currentUser, subjects,
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Add Event</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{editingEvent ? 'Edit Event' : 'Add Event'}</h2>
           {isMentor && (
             <span className="ml-3 text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
               Dept View — Quiz conflicts enforced
@@ -189,7 +202,7 @@ export function AddEventDialog({ open, onClose, onSubmit, currentUser, subjects,
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
             <button type="submit" disabled={loading} className="px-4 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary-light disabled:opacity-60">
-              {loading ? "Saving..." : "Save Event"}
+              {loading ? (editingEvent ? "Saving..." : "Saving...") : (editingEvent ? "Update Event" : "Save Event")}
             </button>
           </div>
         </form>

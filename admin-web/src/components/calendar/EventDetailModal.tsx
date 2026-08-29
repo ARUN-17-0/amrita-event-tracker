@@ -1,4 +1,4 @@
-import { X, Clock, MapPin, BookOpen, User, CalendarDays, CalendarPlus } from 'lucide-react';
+import { X, Clock, MapPin, BookOpen, User, CalendarDays, CalendarPlus, Pencil, Trash2 } from 'lucide-react';
 import { AcademicEvent } from '@/types';
 
 interface EventDetailModalProps {
@@ -7,6 +7,8 @@ interface EventDetailModalProps {
   subjectName?: string;
   sectionName?: string;
   creatorName?: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 const TYPE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -47,7 +49,7 @@ function buildGoogleCalendarUrl(event: AcademicEvent, subjectName?: string, sect
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-export function EventDetailModal({ event, onClose, subjectName, sectionName, creatorName }: EventDetailModalProps) {
+export function EventDetailModal({ event, onClose, subjectName, sectionName, creatorName, onEdit, onDelete }: EventDetailModalProps) {
   if (!event) return null;
   const style = TYPE_STYLES[event.type] ?? TYPE_STYLES.other;
   const leftColor = LEFT_COLORS[event.type] ?? 'bg-gray-500';
@@ -111,7 +113,7 @@ export function EventDetailModal({ event, onClose, subjectName, sectionName, cre
             </div>
           )}
 
-          <div className="mt-5 flex items-center justify-between gap-3">
+          <div className="mt-5 flex items-center justify-between gap-3 flex-wrap">
             <a
               href={gcalUrl}
               target="_blank"
@@ -121,12 +123,30 @@ export function EventDetailModal({ event, onClose, subjectName, sectionName, cre
               <CalendarPlus className="w-4 h-4 text-blue-500" />
               Add to Calendar
             </a>
-            <button
-              onClick={onClose}
-              className="px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-light transition-colors"
-            >
-              Close
-            </button>
+            <div className="flex items-center gap-2 ml-auto">
+              {onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="flex items-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={onDelete}
+                  className="flex items-center gap-1.5 px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-light transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       </div>

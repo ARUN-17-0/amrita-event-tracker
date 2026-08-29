@@ -16,7 +16,7 @@ import { Plus, Trash2 } from 'lucide-react';
 
 export function CalendarPage() {
   const { user } = useAuth();
-  const { events, loading, getEventsForDate, createEvent, deleteEvent } = useCalendar();
+  const { events, loading, getEventsForDate, createEvent, updateEvent, deleteEvent } = useCalendar();
   const { departments } = useDepartments();
   const { subjects } = useSubjects();
   const { sections } = useSections();
@@ -26,40 +26,49 @@ export function CalendarPage() {
   const [filterDept, setFilterDept] = useState('');
   const [filterType, setFilterType] = useState<EventType | ''>('');
   const [addOpen, setAddOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<AcademicEvent | null>(null);
   const [eventToDelete, setEventToDelete] = useState<AcademicEvent | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<AcademicEvent | null>(null);
 
   const isAdmin = user?.role === 'admin';
   const isMentor = user?.role === 'course_mentor';
   const canCreate = isAdmin || user?.role === 'faculty' || isMentor;
-  const canDelete = isAdmin || isMentor;
+
+  // Per-event permission: creator, subject faculty, admin, mentor can modify
+  const canModifyEvent = (event: AcademicEvent) => {
+    if (!user) return false;
+    if (isAdmin || isMentor) return true;
+    if (event.createdBy === user.uid) return true;
+    // Faculty who teaches this subject
+    const sub = subjects.find(s => s.id === event.subjectId);
+    if (sub && sub.facultyId === user.uid) return true;
+    return false;
+  };
 
   const handleDateSelect = (date: Date) => setSelectedDate(date);
 
-  // Synchronous filter from cached events state
   let dailyEvents = getEventsForDate(selectedDate);
-
-  // Department filter
   if (filterDept) {
     dailyEvents = dailyEvents.filter(e => {
       const sec = sections.find(s => s.id === e.sectionId);
       return sec?.departmentId === filterDept;
     });
   }
-  if (filterType) {
-    dailyEvents = dailyEvents.filter(e => e.type === filterType);
-  }
+  if (filterType) dailyEvents = dailyEvents.filter(e => e.type === filterType);
 
-  // Course Mentor: can see full department events on calendar
   let visibleEvents = events;
   if (isMentor && user?.departmentId) {
     visibleEvents = events.filter(e => e.departmentId === user.departmentId);
   } else if (!isAdmin && !isMentor && user?.role === 'faculty' && user?.departmentId) {
-    // Faculty sees their department events
     visibleEvents = events.filter(e => e.departmentId === user.departmentId);
   }
 
   const handleCreateEvent = async (data: Omit<AcademicEvent, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (editingEvent) {
+      await updateEvent(editingEvent.id, data);
+      setEditingEvent(null);
+      return { ok: true, message: '' };
+    }
     return createEvent(data, isMentor);
   };
 
@@ -67,6 +76,18 @@ export function CalendarPage() {
     if (!eventToDelete) return;
     await deleteEvent(eventToDelete.id);
     setEventToDelete(null);
+    setSelectedEvent(null);
+  };
+
+  const handleEditClick = (event: AcademicEvent) => {
+    setSelectedEvent(null);
+    setEditingEvent(event);
+    setAddOpen(true);
+  };
+
+  const handleDeleteClick = (event: AcademicEvent) => {
+    setSelectedEvent(null);
+    setEventToDelete(event);
   };
 
   return (
@@ -102,7 +123,7 @@ export function CalendarPage() {
 
           {canCreate && (
             <button
-              onClick={() => setAddOpen(true)}
+              onClick={() => { setEditingEvent(null); setAddOpen(true); }}
               className="flex items-center px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-light transition-colors text-sm font-medium"
             >
               <Plus className="w-4 h-4 mr-1.5" />
@@ -136,7 +157,7 @@ export function CalendarPage() {
                   dailyEvents.map(event => (
                     <div key={event.id} className="relative group">
                       <EventCard event={event} onClick={() => setSelectedEvent(event)} />
-                      {canDelete && (
+                      {canModifyEvent(event) && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setEventToDelete(event); }}
                           className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 p-1 bg-white rounded-full shadow transition-all"
@@ -154,7 +175,7 @@ export function CalendarPage() {
                     </div>
                     <p className="text-gray-500 text-sm">No events scheduled for this day.</p>
                     {canCreate && (
-                      <button onClick={() => setAddOpen(true)} className="mt-3 text-sm text-primary hover:underline">
+                      <button onClick={() => { setEditingEvent(null); setAddOpen(true); }} className="mt-3 text-sm text-primary hover:underline">
                         + Add an event
                       </button>
                     )}
@@ -169,12 +190,13 @@ export function CalendarPage() {
       {user && (
         <AddEventDialog
           open={addOpen}
-          onClose={() => setAddOpen(false)}
+          onClose={() => { setAddOpen(false); setEditingEvent(null); }}
           onSubmit={handleCreateEvent}
           currentUser={user}
           subjects={subjects}
           sections={sections}
           defaultDate={selectedDate}
+          editingEvent={editingEvent}
         />
       )}
 
@@ -194,7 +216,10 @@ export function CalendarPage() {
         subjectName={subjects.find(s => s.id === selectedEvent?.subjectId)?.name}
         sectionName={sections.find(s => s.id === selectedEvent?.sectionId)?.name}
         creatorName={faculty.find(f => f.uid === selectedEvent?.createdBy)?.fullName}
+        onEdit={selectedEvent && canModifyEvent(selectedEvent) ? () => handleEditClick(selectedEvent) : undefined}
+        onDelete={selectedEvent && canModifyEvent(selectedEvent) ? () => handleDeleteClick(selectedEvent) : undefined}
       />
     </AdminLayout>
   );
 }
+

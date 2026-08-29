@@ -51,10 +51,15 @@ export const useCalendar = () => {
     return { ok: true, message: '' };
   };
 
+  const updateEvent = async (id: string, data: Partial<Omit<AcademicEvent, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
+    await calendarService.updateEvent(id, data);
+    await fetch();
+  };
+
   const deleteEvent = async (id: string): Promise<void> => {
     await calendarService.deleteEvent(id);
     await fetch();
   };
 
-  return { events, data: events, loading, error, refresh: fetch, getEventsForDate, getEventsForMonth, createEvent, deleteEvent };
+  return { events, data: events, loading, error, refresh: fetch, getEventsForDate, getEventsForMonth, createEvent, updateEvent, deleteEvent };
 };
