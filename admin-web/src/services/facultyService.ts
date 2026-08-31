@@ -1,4 +1,4 @@
-﻿import { UserProfile } from '../types';
+import { UserProfile } from '../types';
 import { mockFaculty } from '../mock/data';
 import { db, secondaryAuth } from '../config/firebase';
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
@@ -43,11 +43,29 @@ const firebaseService = {
   create: async (data: Omit<UserProfile, 'uid' | 'createdAt' | 'updatedAt'> & { password?: string }): Promise<UserProfile> => {
     if (!db || !secondaryAuth) throw new Error('No FB');
     const password = (data as any).password || 'Amrita@123';
-    // Create Firebase Auth user via secondary app (doesn't displace admin session)
-    const cred = await createUserWithEmailAndPassword(secondaryAuth, data.email, password);
-    await signOut(secondaryAuth);
-    const uid = cred.user.uid;
     const { password: _pw, ...profileData } = data as any;
+    let uid: string;
+    try {
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, data.email, password);
+      await signOut(secondaryAuth);
+      uid = cred.user.uid;
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        // Auth account exists (e.g. previously deleted profile) — find it and reuse
+        const existing = await getDocs(query(collection(db, 'profiles'), where('email', '==', data.email)));
+        if (!existing.empty) {
+          uid = existing.docs[0].id;
+        } else {
+          // Auth exists but no profile — sign in to get UID
+          const { signInWithEmailAndPassword } = await import('firebase/auth');
+          const cred = await signInWithEmailAndPassword(secondaryAuth, data.email, password);
+          await signOut(secondaryAuth);
+          uid = cred.user.uid;
+        }
+      } else {
+        throw err;
+      }
+    }
     const profile: UserProfile = { ...profileData, uid, isActive: true, createdAt: new Date(), updatedAt: new Date() };
     await setDoc(doc(db, 'profiles', uid), { ...profile, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
     return profile;
