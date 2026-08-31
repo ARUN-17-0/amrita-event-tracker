@@ -67,8 +67,8 @@ export function AddEventDialog({ open, onClose, onSubmit, currentUser, subjects,
     const deptSubjects = selectedSection
       ? subjects.filter(sub => sub.departmentId === selectedSection.departmentId)
       : subjects.filter(sub => sub.departmentId === currentUser.departmentId);
-    // Faculty only see subjects assigned to them
-    if (isFaculty) return deptSubjects.filter(sub => sub.facultyId === currentUser.uid);
+    // Faculty only see subjects assigned to them (or unassigned ones)
+    if (isFaculty) return deptSubjects.filter(sub => !sub.facultyId || sub.facultyId === currentUser.uid);
     return deptSubjects;
   })();
 
