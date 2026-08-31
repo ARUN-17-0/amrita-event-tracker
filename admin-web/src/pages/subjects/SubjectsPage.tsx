@@ -11,6 +11,7 @@ import { useSemesters } from '@/hooks/useSemesters';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useSections } from '@/hooks/useSections';
 import { useAuth } from '@/hooks/useAuth';
+import { useFaculty } from '@/hooks/useFaculty';
 import { Subject, TableColumn, AcademicEvent } from '@/types';
 import { Plus, Edit, Trash2, LayoutGrid, List, Award, CalendarDays, X } from 'lucide-react';
 
@@ -22,6 +23,7 @@ export function SubjectsPage() {
   const { semesters } = useSemesters();
   const { events } = useCalendar();
   const { sections } = useSections();
+  const { faculty } = useFaculty();
 
   const [search, setSearch] = useState('');
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
@@ -44,7 +46,8 @@ export function SubjectsPage() {
     semesterId: '',
     semesterNumber: 1,
     semesterType: 'odd' as 'odd' | 'even',
-    credits: 3
+    credits: 3,
+    facultyId: ''
   });
   const [formLoading, setFormLoading] = useState(false);
 
@@ -97,7 +100,8 @@ export function SubjectsPage() {
       semesterId: semesters.find(s => s.isCurrent)?.id || (semesters[0]?.id || ''),
       semesterNumber: selectedSemNumber > 0 ? selectedSemNumber : 1,
       semesterType: (selectedSemNumber % 2 === 0 && selectedSemNumber > 0) ? 'even' : 'odd',
-      credits: 3
+      credits: 3,
+      facultyId: ''
     });
     setDialogOpen(true);
   };
@@ -111,7 +115,8 @@ export function SubjectsPage() {
       semesterId: sub.semesterId || '',
       semesterNumber: sub.semesterNumber || (sub.semesterType === 'even' ? 2 : 1),
       semesterType: sub.semesterType || (sub.semesterNumber && sub.semesterNumber % 2 === 0 ? 'even' : 'odd'),
-      credits: sub.credits
+      credits: sub.credits,
+      facultyId: sub.facultyId || ''
     });
     setDialogOpen(true);
   };
@@ -418,6 +423,16 @@ export function SubjectsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Credits</label>
               <input type="number" required min="1" max="10" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.credits} onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) || 1 })} />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Faculty</label>
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary sm:text-sm" value={formData.facultyId} onChange={(e) => setFormData({ ...formData, facultyId: e.target.value })}>
+              <option value="">-- Not Assigned --</option>
+              {faculty.filter(f => !formData.departmentId || f.departmentId === formData.departmentId).map(f => (
+                <option key={f.uid} value={f.uid}>{f.fullName}</option>
+              ))}
+            </select>
           </div>
         </div>
       </FormDialog>

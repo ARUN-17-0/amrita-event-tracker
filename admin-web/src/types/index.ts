@@ -82,6 +82,7 @@ export interface Subject {
   semesterType?: 'odd' | 'even';
   semesterNumber?: number;
   credits: number;
+  facultyId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

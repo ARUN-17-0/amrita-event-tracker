@@ -62,9 +62,15 @@ export function AddEventDialog({ open, onClose, onSubmit, currentUser, subjects,
 
   const availableSections = isAdmin ? sections : sections.filter(s => s.departmentId === currentUser.departmentId);
   const selectedSection = sections.find(s => s.id === form.sectionId);
-  const availableSubjects = selectedSection
-    ? subjects.filter(sub => sub.departmentId === selectedSection.departmentId)
-    : subjects.filter(sub => sub.departmentId === currentUser.departmentId);
+  const isFaculty = !isAdmin && !isMentor;
+  const availableSubjects = (() => {
+    const deptSubjects = selectedSection
+      ? subjects.filter(sub => sub.departmentId === selectedSection.departmentId)
+      : subjects.filter(sub => sub.departmentId === currentUser.departmentId);
+    // Faculty only see subjects assigned to them
+    if (isFaculty) return deptSubjects.filter(sub => sub.facultyId === currentUser.uid);
+    return deptSubjects;
+  })();
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
