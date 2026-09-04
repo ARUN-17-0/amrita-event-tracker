@@ -102,18 +102,29 @@ const firebaseAuthService = {
             const expectedPw = profileData.initialPassword || 'Amrita@123';
             
             if (password === expectedPw) {
-              const newCred = await createUserWithEmailAndPassword(auth, emailClean, password);
-              const updatedProfile = {
-                ...profileData,
-                uid: newCred.user.uid,
-                updatedAt: serverTimestamp()
-              };
-              delete updatedProfile.initialPassword;
-              await setDoc(doc(db, 'profiles', newCred.user.uid), updatedProfile);
-              if (profileDoc.id !== newCred.user.uid) {
-                try { await deleteDoc(profileDoc.ref); } catch {}
+              try {
+                // New user — create Auth account
+                const newCred = await createUserWithEmailAndPassword(auth, emailClean, password);
+                const updatedProfile = {
+                  ...profileData,
+                  uid: newCred.user.uid,
+                  updatedAt: serverTimestamp()
+                };
+                delete updatedProfile.initialPassword;
+                await setDoc(doc(db, 'profiles', newCred.user.uid), updatedProfile);
+                if (profileDoc.id !== newCred.user.uid) {
+                  try { await deleteDoc(profileDoc.ref); } catch {}
+                }
+                return { ...updatedProfile, uid: newCred.user.uid } as UserProfile;
+              } catch (createErr: any) {
+                if (createErr.code === 'auth/email-already-in-use') {
+                  // Auth account exists — admin may have reset password, try signing in again
+                  const retryCred = await signInWithEmailAndPassword(auth, emailClean, password);
+                  const snap = await getDoc(doc(db, 'profiles', retryCred.user.uid));
+                  if (snap.exists()) return { ...snap.data(), uid: retryCred.user.uid } as UserProfile;
+                }
+                throw createErr;
               }
-              return { ...updatedProfile, uid: newCred.user.uid } as UserProfile;
             }
           }
         } catch {
@@ -185,6 +196,11 @@ export async function changePassword(newPassword: string): Promise<void> {
   const currentUser = auth?.currentUser;
   if (!currentUser) throw new Error('Not logged in');
   await updatePassword(currentUser, newPassword);
+  // Keep Firestore initialPassword in sync so admin reset still works
+  if (db) {
+    const { updateDoc: updateDocFn } = await import('firebase/firestore');
+    try { await updateDocFn(doc(db, 'profiles', currentUser.uid), { initialPassword: newPassword }); } catch {}
+  }
 }
 
 // Admin resets another user's password
