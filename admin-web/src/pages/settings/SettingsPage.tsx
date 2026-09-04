@@ -173,23 +173,6 @@ export function SettingsPage() {
               ))}
             </div>
           </div>
-
-          {/* App Info */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">Application Info</h3>
-            <div className="divide-y divide-gray-100 text-sm">
-              {[
-                ["Version", "v1.2.0"],
-                ["Institution", "Amrita School of Engineering, Bengaluru"],
-                ["Mode", import.meta.env.VITE_USE_MOCK === "true" ? "Mock / Offline" : "Firebase / Live"],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between py-2.5">
-                  <span className="text-gray-500">{k}</span>
-                  <span className="font-medium">{v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </AdminLayout>
