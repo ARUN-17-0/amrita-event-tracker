@@ -1,7 +1,7 @@
 import { UserProfile } from '../types';
 import { mockAdmin, mockDemoAccounts } from '../mock/data';
 import { auth, db } from '../config/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
@@ -179,3 +179,10 @@ const firebaseAuthService = {
 
 export const authService = isMock ? mockAuthService : firebaseAuthService;
 export { mockAdmin };
+
+export async function changePassword(newPassword: string): Promise<void> {
+  if (isMock) return; // mock mode — no real auth
+  const currentUser = auth?.currentUser;
+  if (!currentUser) throw new Error('Not logged in');
+  await updatePassword(currentUser, newPassword);
+}

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { Shield, LogOut, Sun, Moon, KeyRound, Check, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { registerMockCredential } from "@/services/authService";
+import { changePassword } from "@/services/authService";
 
 export function SettingsPage() {
   const { user, logout } = useAuth();
@@ -33,15 +33,23 @@ export function SettingsPage() {
     navigate("/login");
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwError("");
     setPwSuccess(false);
     if (pwForm.newPw.length < 6) { setPwError("New password must be at least 6 characters."); return; }
     if (pwForm.newPw !== pwForm.confirm) { setPwError("Passwords do not match."); return; }
-    if (user) registerMockCredential(user, pwForm.newPw);
-    setPwSuccess(true);
-    setPwForm({ newPw: "", confirm: "" });
+    try {
+      await changePassword(pwForm.newPw);
+      setPwSuccess(true);
+      setPwForm({ newPw: "", confirm: "" });
+    } catch (err: any) {
+      if (err.code === 'auth/requires-recent-login') {
+        setPwError("Session expired. Please log out, log back in, and try again.");
+      } else {
+        setPwError(err.message || "Failed to update password.");
+      }
+    }
   };
 
   return (
