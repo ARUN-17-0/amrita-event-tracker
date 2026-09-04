@@ -181,8 +181,39 @@ export const authService = isMock ? mockAuthService : firebaseAuthService;
 export { mockAdmin };
 
 export async function changePassword(newPassword: string): Promise<void> {
-  if (isMock) return; // mock mode — no real auth
+  if (isMock) return;
   const currentUser = auth?.currentUser;
   if (!currentUser) throw new Error('Not logged in');
   await updatePassword(currentUser, newPassword);
 }
+
+// Admin resets another user's password
+export async function adminResetPassword(uid: string, newPassword: string): Promise<void> {
+  if (isMock) return;
+  if (!db) throw new Error('No FB');
+
+  // Get the user's profile to find their email and current initialPassword
+  const profileSnap = await getDoc(doc(db, 'profiles', uid));
+  if (!profileSnap.exists()) throw new Error('User not found');
+  const profile = profileSnap.data() as any;
+  const email = profile.email;
+  const currentPw = profile.initialPassword || 'Amrita@123';
+
+  // Try to sign in via secondaryAuth and update the Auth password
+  const { secondaryAuth } = await import('../config/firebase');
+  if (secondaryAuth) {
+    try {
+      const cred = await signInWithEmailAndPassword(secondaryAuth, email, currentPw);
+      await updatePassword(cred.user, newPassword);
+      await signOut(secondaryAuth);
+    } catch {
+      // Auth account may not exist yet or password mismatch — that's ok,
+      // updating initialPassword below ensures next login uses new password
+    }
+  }
+
+  // Always update initialPassword in Firestore
+  const { updateDoc: updateDocFn } = await import('firebase/firestore');
+  await updateDocFn(doc(db, 'profiles', uid), { initialPassword: newPassword });
+}
+

@@ -11,7 +11,7 @@ import { useSections } from '@/hooks/useSections';
 import { useSemesters } from '@/hooks/useSemesters';
 import { UserProfile, TableColumn } from '@/types';
 import { Plus, Edit, Upload, Trash2, Users, GraduationCap, Building2 } from 'lucide-react';
-import { registerMockCredential } from '@/services/authService';
+import { adminResetPassword } from '@/services/authService';
 
 export function StudentsPage() {
   const navigate = useNavigate();
@@ -182,7 +182,7 @@ export function StudentsPage() {
         const { password, confirmPassword, changePassword, ...profileFields } = studentPayload;
         await updateStudent(editingStudent.uid, profileFields);
         if (changePassword) {
-          registerMockCredential(editingStudent, changePassword);
+          await adminResetPassword(editingStudent.uid, changePassword);
         }
       } else {
         await addStudent(studentPayload);

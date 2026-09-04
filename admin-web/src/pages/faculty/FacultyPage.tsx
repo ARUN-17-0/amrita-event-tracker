@@ -11,7 +11,7 @@ import { useSections } from '@/hooks/useSections';
 import { useSemesters } from '@/hooks/useSemesters';
 import { UserProfile, TableColumn, BatchAssignment } from '@/types';
 import { Plus, Edit, Trash2, Calendar, BookOpen, Users } from 'lucide-react';
-import { registerMockCredential } from '@/services/authService';
+import { adminResetPassword } from '@/services/authService';
 
 export function FacultyPage() {
   const { faculty, loading, addFaculty, updateFaculty, deleteFaculty } = useFaculty();
@@ -149,7 +149,7 @@ export function FacultyPage() {
         const { password, confirmPassword, changePassword, ...profileFields } = formData;
         await updateFaculty(editingFac.uid, profileFields);
         if (formData.changePassword) {
-          registerMockCredential(editingFac, formData.changePassword);
+          await adminResetPassword(editingFac.uid, formData.changePassword);
         }
       } else {
         await addFaculty(formData);
