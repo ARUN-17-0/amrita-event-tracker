@@ -1,0 +1,84 @@
+﻿rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserProfile() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        getUserProfile().role == 'admin' ||
+        request.auth.token.email == 'admin@cb.amrita.edu'
+      );
+    }
+
+    function isFaculty() {
+      return isAuthenticated() && (
+        isAdmin() ||
+        getUserProfile().role == 'faculty' ||
+        getUserProfile().role == 'course_mentor'
+      );
+    }
+
+    // Profiles Collection
+    match /profiles/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || (isAuthenticated() && request.auth.uid == userId && request.resource.data.role != 'admin');
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        request.auth.uid == userId &&
+        request.resource.data.role == resource.data.role
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Events Collection
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow create: if isFaculty() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.createdBy == request.auth.uid
+      );
+      allow delete: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.createdBy == request.auth.uid
+      );
+    }
+
+    // Academic Structure Collections (Departments, Sections, Subjects, Semesters)
+    match /departments/{departmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /sections/{sectionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /subjects/{subjectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /semesters/{semesterId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Audit Logs (Append-only by authenticated users, read-only by Admin, immutable)
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,19 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AcademicEvent, EventType } from '../types';
-import { calendarService } from '../services/calendarService';
+import { calendarService, EventFilter } from '../services/calendarService';
 import { checkWeeklyLimit, checkTimeSpacing, checkDeptQuizConflict } from '../utils/eventRules';
 
-export const useCalendar = () => {
+export const useCalendar = (initialFilter?: EventFilter) => {
   const [events, setEvents] = useState<AcademicEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetch = useCallback(async () => {
+  const fetch = useCallback(async (filterOverride?: EventFilter) => {
     setLoading(true);
-    try { setEvents(await calendarService.getEvents()); setError(null); }
+    try {
+      const activeFilter = filterOverride || initialFilter;
+      setEvents(await calendarService.getEvents(activeFilter));
+      setError(null);
+    }
     catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, []);
+  }, [initialFilter]);
   useEffect(() => { fetch(); }, [fetch]);
 
   // Synchronous filter from loaded state — no async re-fetch needed

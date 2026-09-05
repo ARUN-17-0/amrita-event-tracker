@@ -1,7 +1,14 @@
 import { AcademicEvent } from '../types';
 import { mockEvents } from '../mock/data';
 import { db } from '../config/firebase';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp, Timestamp, query, where } from 'firebase/firestore';
+
+export interface EventFilter {
+  startDate?: Date;
+  endDate?: Date;
+  departmentId?: string;
+  sectionId?: string;
+}
 
 const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -10,9 +17,14 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 let runtimeEvents: AcademicEvent[] = [...mockEvents];
 
 const mockService = {
-  getEvents: async (): Promise<AcademicEvent[]> => {
+  getEvents: async (filter?: EventFilter): Promise<AcademicEvent[]> => {
     await delay(100);
-    return [...runtimeEvents];
+    let list = [...runtimeEvents];
+    if (filter?.startDate) list = list.filter(e => e.eventDate >= filter.startDate!);
+    if (filter?.endDate) list = list.filter(e => e.eventDate <= filter.endDate!);
+    if (filter?.departmentId) list = list.filter(e => e.departmentId === filter.departmentId);
+    if (filter?.sectionId) list = list.filter(e => e.sectionId === filter.sectionId);
+    return list;
   },
   getEventsForDate: async (date: Date): Promise<AcademicEvent[]> => {
     await delay(50);
@@ -40,18 +52,44 @@ const mockService = {
 };
 
 const firebaseService = {
-  getEvents: async (): Promise<AcademicEvent[]> => {
+  getEvents: async (filter?: EventFilter): Promise<AcademicEvent[]> => {
     if (!db) throw new Error('No FB');
-    const qs = await getDocs(collection(db, 'events'));
-    return qs.docs.map(d => ({ ...d.data(), id: d.id, eventDate: d.data().eventDate?.toDate(), createdAt: d.data().createdAt?.toDate(), updatedAt: d.data().updatedAt?.toDate() } as AcademicEvent));
+    const constraints: any[] = [];
+    if (filter?.startDate) {
+      constraints.push(where('eventDate', '>=', Timestamp.fromDate(filter.startDate)));
+    }
+    if (filter?.endDate) {
+      constraints.push(where('eventDate', '<=', Timestamp.fromDate(filter.endDate)));
+    }
+    if (filter?.departmentId) {
+      constraints.push(where('departmentId', '==', filter.departmentId));
+    }
+    if (filter?.sectionId) {
+      constraints.push(where('sectionId', '==', filter.sectionId));
+    }
+
+    const colRef = collection(db, 'events');
+    const firestoreQuery = constraints.length > 0 ? query(colRef, ...constraints) : colRef;
+    const qs = await getDocs(firestoreQuery);
+    return qs.docs.map(d => ({
+      ...d.data(),
+      id: d.id,
+      eventDate: d.data().eventDate?.toDate ? d.data().eventDate.toDate() : new Date(d.data().eventDate),
+      createdAt: d.data().createdAt?.toDate ? d.data().createdAt.toDate() : new Date(),
+      updatedAt: d.data().updatedAt?.toDate ? d.data().updatedAt.toDate() : new Date()
+    } as AcademicEvent));
   },
   getEventsForDate: async (date: Date): Promise<AcademicEvent[]> => {
-    const all = await firebaseService.getEvents();
-    return all.filter(e => e.eventDate.toDateString() === date.toDateString());
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    return firebaseService.getEvents({ startDate: start, endDate: end });
   },
   getEventsForMonth: async (year: number, month: number): Promise<AcademicEvent[]> => {
-    const all = await firebaseService.getEvents();
-    return all.filter(e => e.eventDate.getFullYear() === year && e.eventDate.getMonth() === month);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month + 2, 0, 23, 59, 59, 999);
+    return firebaseService.getEvents({ startDate: start, endDate: end });
   },
   createEvent: async (event: Omit<AcademicEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AcademicEvent> => {
     if (!db) throw new Error('No FB');

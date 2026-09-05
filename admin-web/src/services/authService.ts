@@ -196,11 +196,6 @@ export async function changePassword(newPassword: string): Promise<void> {
   const currentUser = auth?.currentUser;
   if (!currentUser) throw new Error('Not logged in');
   await updatePassword(currentUser, newPassword);
-  // Keep Firestore initialPassword in sync so admin reset still works
-  if (db) {
-    const { updateDoc: updateDocFn } = await import('firebase/firestore');
-    try { await updateDocFn(doc(db, 'profiles', currentUser.uid), { initialPassword: newPassword }); } catch {}
-  }
 }
 
 // Admin resets another user's password
@@ -223,13 +218,15 @@ export async function adminResetPassword(uid: string, newPassword: string): Prom
       await updatePassword(cred.user, newPassword);
       await signOut(secondaryAuth);
     } catch {
-      // Auth account may not exist yet or password mismatch — that's ok,
-      // updating initialPassword below ensures next login uses new password
+      // If sign in failed (e.g. Auth user not yet created for imported student),
+      // create the Auth user directly with the new password!
+      try {
+        await createUserWithEmailAndPassword(secondaryAuth, email, newPassword);
+        await signOut(secondaryAuth);
+      } catch {
+        // Silent fallback
+      }
     }
   }
-
-  // Always update initialPassword in Firestore
-  const { updateDoc: updateDocFn } = await import('firebase/firestore');
-  await updateDocFn(doc(db, 'profiles', uid), { initialPassword: newPassword });
 }
 

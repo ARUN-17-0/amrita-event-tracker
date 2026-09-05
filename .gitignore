@@ -32,3 +32,7 @@ Thumbs.db
 # Scratch scripts from development
 admin-web/create_files*.cjs
 admin-web/create_files*.py
+admin-web/scripts/*.mjs
+!admin-web/scripts/seed.mjs
+*.local
+DEVOPS_MASTERCLASS.md

@@ -1,4 +1,4 @@
-﻿import { AcademicEvent, EventType } from "../types";
+import type { AcademicEvent, EventType } from "../types/index.ts";
 
 const CAPPED_TYPES: EventType[] = ["quiz", "assignment"];
 
